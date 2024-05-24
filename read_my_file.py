@@ -1,14 +1,16 @@
 import pandas as pd
 from itertools import combinations
 
-def extract_name(path):
+def extract_name(column_path):
     """
     This will refactor the column name and only get the useful information.
     :param path:
     :return:
     """
+    # Input: String of "F:\Julia\wheldone-DIFFPOP\04-19-24\OV3-whel-n3-F7.mzML"
+    # Output: whel-n3-F7
     # Split the string on backslash and pick the last part
-    file_name = path.split('\\')[-1]
+    file_name = column_path.split('\\')[-1]
     # Split the file name on '-' and extract the necessary parts
     parts = file_name.split('-')
     with_mzml = '-'.join(parts[1:4])
@@ -21,6 +23,8 @@ def dataframe_process(file_name):
     :return:
     """
     # Read the tsv file
+    # Input: tsv data
+    # Output: dataframe with no empty genes and nicer column names
     df = pd.read_csv(file_name, delimiter='\t')
     new_column_names = df.columns[:5].tolist() + [extract_name(col) for col in df.columns[5:]]
     df.columns = new_column_names
@@ -35,6 +39,8 @@ def parse_col_name(col):
     :param col:
     :return:
     """
+    # Input: whel-n1-F9
+    # Output: prefix = whel, run = n1, f = F9
     prefix, run, f = col.split('-')
     return prefix, run, f
 
@@ -45,8 +51,10 @@ def column_group(df):
     :param df:
     :return:
     """
+    # Input: Dataframe
+    # output: A dictionary of grouped columns according to their fraction and method
     groups = {}
-    for col in df.columns[5:]:
+    for col in df.columns[1:]:
         prefix, run, f_number = parse_col_name(col)
         key = (prefix, f_number)
         if key not in groups:
@@ -69,6 +77,19 @@ def pearson_correlations(df, group):
     return subset.corr()
 
 
+def spearman_correlations(df, group):
+    """
+    Get the subset correlation matrix
+    :param df:
+    :param group:
+    :return:
+    """
+    # Extract only the relevant columns for the group
+    subset = df[group]
+    # Compute the correlation matrix
+    return subset.corr(method='spearman')
+
+
 def dataframe_work(df, column_dict):
     """
     get the dictionary of all the pearson correlations.
@@ -86,7 +107,97 @@ def dataframe_work(df, column_dict):
 
     return results
 
+
+def dataframe_work_spearman(df, column_dict):
+    """
+    get the dictionary of all the spearman correlations.
+    :param df:
+    :param column_dict:
+    :return:
+    """
+
+    results = {}
+
+    for key, group_columns in column_dict.items():
+            results[key] = spearman_correlations(df, group_columns)
+            print(f"Correlations for {key}:")
+            print(results[key])
+
+    return results
+
+
+def merge_new_run(df, df_new):
+    """
+    Merge the two dataframes and replacing the new runs to the old runs on the same gene.
+    :param df:
+    :param df_new:
+    :return:
+    """
+    # Input: 2 dataframes old and new
+    # Output: a merged dataframe with updated runs
+    col_n = list(df_new.columns)[5:-1]
+    merged_df = df.merge(df_new, on='Genes', how='left', suffixes=('', '_new'))
+    merged_df.drop([merged_df.columns[i] + "_new" for i in [0, 1, 2, 4]], axis=1, inplace=True)
+    merged_df.drop(merged_df.columns[-1], axis=1, inplace = True)
+    merged_df.columns = [rename_column(col) for col in merged_df.columns]
+
+    # for col in col_n:
+    #     merged_df[col] = merged_df[col + "_new"]
+    # merged_df.drop([col + '_new' for col in col_n], axis=1, inplace=True)
+
+    return merged_df
+
+
+def rename_column(col_name):
+    """
+    Change the column names from n(x)_new to r(x)
+    :param col_name:
+    :return:
+    """
+    if col_name.endswith('_new'):
+        new_name = col_name.replace('_new', '').replace('n', 'r')
+        return new_name
+    return col_name
+
+
+def transform_correlation_dict(corr_dict):
+    results = []
+    for (condition, fraction), df in corr_dict.items():
+        correlations = {'Fraction': f'{condition}-{fraction}'}
+        processed_pairs = set()
+        pairs = list(combinations(df.columns, 2))
+        for (col1, col2) in pairs:
+            pair_name = f"{col1.split('-')[1]}+{col2.split('-')[1]}"
+            reverse_pair_name = f"{col2.split('-')[1]}+{col1.split('-')[1]}"
+            if pair_name not in processed_pairs and reverse_pair_name not in processed_pairs:
+                correlations[pair_name] = df.loc[col1, col2]
+                processed_pairs.add(pair_name)
+        results.append(correlations)
+    final_df = pd.DataFrame(results)
+
+    return final_df
+
+
 if __name__ == '__main__':
-    dd = dataframe_process("report.pg_matrix 3.tsv")
-    gg = column_group(dd)
-    aa = dataframe_work(dd, gg)
+    # df_original = dataframe_process("report.pg_matrix 3.tsv")
+    # df_rerun = dataframe_process("report.pg_matrix-re-run.tsv")
+    # column_names_rerun = list(df_rerun.columns)[5:-1]
+    # merged_df = merge_new_run(df_original, df_rerun)
+    # merged_runs_columns = column_group(merged_df)
+    # pearson_cor = dataframe_work(merged_df, merged_runs_columns)
+    # fin_pearson = transform_correlation_dict(pearson_cor)
+    #
+    # # merged_df.to_excel("Manual_result.xlsx", index = False)
+    # fin_pearson.sort_index().to_excel("Pearson_result.xlsx", index = False)
+
+    experiment = pd.read_excel("With_R2.xlsx")
+    experiment_columns = column_group(experiment)
+
+    experiment_pearson = dataframe_work(experiment, experiment_columns)
+    experiment_spearman = dataframe_work_spearman(experiment, experiment_columns)
+
+    final_result_pearson = transform_correlation_dict(experiment_pearson)
+    final_result_spearman = transform_correlation_dict(experiment_spearman)
+
+    final_result_pearson.sort_values(by='Fraction').to_excel("Final_result_Pearson.xlsx", index = False)
+    final_result_spearman.sort_values(by='Fraction').to_excel("Final_result_Spearman.xlsx", index = False)

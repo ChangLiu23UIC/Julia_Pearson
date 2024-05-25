@@ -40,7 +40,7 @@ def subset_by_run(df):
         subsets[x] = subset
     return subsets
 
-def graphing_methods(dataframe, gene_name):
+def graphing_methods(dataframe, gene_name,treatment_type, n = None):
     """
     This will plot the canonical result of the diffpop method for either whel or DMSO
     :param df:
@@ -49,18 +49,22 @@ def graphing_methods(dataframe, gene_name):
     if gene_name not in dataframe['Genes'].values:
         raise ValueError(f"Gene {gene_name} not found in the dataframe.")
 
+    treatment_columns = [col for col in dataframe.columns if treatment_type in col]
+    if not treatment_columns:
+        raise ValueError(f"No columns found for treatment type {treatment_type}.")
+
     gene_row = dataframe[dataframe['Genes'] == gene_name]
-    x_labels = [col.split('-')[-1].replace('F', '') for col in dataframe.columns if 'DMSO' in col]
-    y_values = gene_row[[col for col in dataframe.columns if 'DMSO' in col]].values.flatten()
+    x_labels = [col.split('-')[-1].replace('F', '') for col in treatment_columns]
+    y_values = gene_row[treatment_columns].values.flatten()
 
     plt.figure(figsize=(10, 6))
     plt.plot(x_labels, y_values, marker='o')
     for i, txt in enumerate(y_values):
         plt.annotate(txt, (x_labels[i], y_values[i]), textcoords="offset points", xytext=(0, 10), ha='center')
-    plt.xlabel('F number')
+    plt.xlabel('Fraction number')
     plt.ylabel('Intensity')
-    plt.title(f'Gene Expression for {gene_name}')
-    plt.grid(True)
+    plt.title(f'Protein Level for {gene_name} under {treatment_type} treatment run {n} ')
+    plt.grid(False)
     plt.show()
 
 
@@ -76,3 +80,4 @@ if __name__ == '__main__':
     w1 = gene_whel_runs["1"]
     w2 = gene_whel_runs["2"]
     w3 = gene_whel_runs["3"]
+

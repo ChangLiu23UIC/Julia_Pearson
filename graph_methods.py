@@ -99,11 +99,11 @@ def average_graph(dmso_df, whel_df, protein):
     plt.plot(x_labels, whel_values, marker='o', label='WHEL Dataset')
 
     plt.xlabel('Fraction')
-    plt.ylabel(f'Log Transformed Intensity of {protein} protein')
-    plt.title(f'Log Transformed for {protein} protein')
+    plt.ylabel(f'Absolute Intensity of {protein} protein')
+    plt.title(f'Absolute for {protein} protein')
     plt.legend()
     plt.grid(False)
-    plt.savefig(f'Log Transformed Intensity for {protein} protein.png')
+    plt.savefig(f'Absolute Intensity for {protein} protein.png')
     plt.close()
 
 
@@ -148,6 +148,10 @@ if __name__ == '__main__':
 
     avg_dmso = transform_dataframe(filled_dmso)
     avg_whel = transform_dataframe(filled_whel)
+
+    avg_whel.to_excel("filled_whel.xlsx")
+    avg_dmso.to_excel("filled_dmso.xlsx")
+
 
     average_graph(avg_dmso, avg_whel, "MYCBP")
     average_graph(avg_dmso, avg_whel, "MYCBP2")

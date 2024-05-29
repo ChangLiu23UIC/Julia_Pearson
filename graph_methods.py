@@ -71,8 +71,8 @@ def graphing_methods(dataframe, gene_name,treatment_type, n = None):
 def separate_dataframe(df):
     genes_col = df['Genes']
 
-    dmso_cols = [col for col in df.columns if col.startswith('DMSO-F')]
-    whel_cols = [col for col in df.columns if col.startswith('WHEL-F')]
+    dmso_cols = [col for col in df.columns if col.startswith('DMSO-')]
+    whel_cols = [col for col in df.columns if col.startswith('whel-')]
 
     df_dmso = pd.DataFrame({'Genes': genes_col})
     df_dmso = pd.concat([df_dmso, df[dmso_cols]], axis=1)
@@ -107,10 +107,53 @@ def average_graph(dmso_df, whel_df, protein):
     plt.close()
 
 
+def fill_na_with_half_min(df):
+    """
+    """
+    categorical_col = df.iloc[:, 0]
+    numeric_df = df.iloc[:, 1:]
+
+    filled_numeric_df = numeric_df.apply(lambda row: row.fillna(row.min(skipna=True)/2), axis=1)
+    df_filled = pd.concat([categorical_col, filled_numeric_df], axis=1)
+
+    return df_filled
+
+
+def transform_dataframe(df):
+    genes = df['Genes']
+
+    suffixes = df.columns.str.extract(r'-(F\d)')[0]
+
+    averaged_columns = pd.DataFrame(index=df.index)
+
+    for suffix in suffixes.dropna().unique():
+        columns_to_average = df.columns[df.columns.str.contains(f'-{suffix}$')]
+        prefix = df.columns[df.columns.str.contains(f'-{suffix}$')].str.extract(r'(\w+-)')[0][0]
+        new_column_name = f'{prefix}{suffix}'
+        averaged_columns[new_column_name] = df[columns_to_average].mean(axis=1)
+
+    df_transformed = pd.concat([genes, averaged_columns], axis=1)
+
+    return df_transformed
+
 
 if __name__ == '__main__':
 
     print("Hello World!")
+
+    df_new = pd.read_csv("new_dataset.csv")
+    df_dmso, df_whel = separate_dataframe(df_new)
+    filled_dmso = fill_na_with_half_min(df_dmso)
+    filled_whel = fill_na_with_half_min(df_whel)
+
+    avg_dmso = transform_dataframe(filled_dmso)
+    avg_whel = transform_dataframe(filled_whel)
+
+    average_graph(avg_dmso, avg_whel, "MYCBP")
+    average_graph(avg_dmso, avg_whel, "MYCBP2")
+    average_graph(avg_dmso, avg_whel, "AURKA")
+    average_graph(avg_dmso, avg_whel, "AURKB")
+    average_graph(avg_dmso, avg_whel, "TPX2")
 
     # #This is for the positive runs
     # averaged_run = pd.read_excel("Positive_fraction.xlsx")

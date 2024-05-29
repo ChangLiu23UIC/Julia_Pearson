@@ -179,6 +179,8 @@ def transform_correlation_dict(corr_dict):
 
 
 if __name__ == '__main__':
+    print("Hello")
+
     # df_original = dataframe_process("report.pg_matrix 3.tsv")
     # df_rerun = dataframe_process("report.pg_matrix-re-run.tsv")
     # column_names_rerun = list(df_rerun.columns)[5:-1]
@@ -190,14 +192,15 @@ if __name__ == '__main__':
     # # merged_df.to_excel("Manual_result.xlsx", index = False)
     # fin_pearson.sort_index().to_excel("Pearson_result.xlsx", index = False)
 
-    experiment = pd.read_excel("With_R2.xlsx")
-    experiment_columns = column_group(experiment)
-
-    experiment_pearson = dataframe_work(experiment, experiment_columns)
-    experiment_spearman = dataframe_work_spearman(experiment, experiment_columns)
-
-    final_result_pearson = transform_correlation_dict(experiment_pearson)
-    final_result_spearman = transform_correlation_dict(experiment_spearman)
-
-    final_result_pearson.sort_values(by='Fraction').to_excel("Final_result_Pearson.xlsx", index = False)
-    final_result_spearman.sort_values(by='Fraction').to_excel("Final_result_Spearman.xlsx", index = False)
+    # # REAL WORK
+    # experiment = pd.read_excel("With_R2.xlsx")
+    # experiment_columns = column_group(experiment)
+    #
+    # experiment_pearson = dataframe_work(experiment, experiment_columns)
+    # experiment_spearman = dataframe_work_spearman(experiment, experiment_columns)
+    #
+    # final_result_pearson = transform_correlation_dict(experiment_pearson)
+    # final_result_spearman = transform_correlation_dict(experiment_spearman)
+    #
+    # final_result_pearson.sort_values(by='Fraction').to_excel("Final_result_Pearson.xlsx", index = False)
+    # final_result_spearman.sort_values(by='Fraction').to_excel("Final_result_Spearman.xlsx", index = False)

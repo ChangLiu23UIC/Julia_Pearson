@@ -68,16 +68,81 @@ def graphing_methods(dataframe, gene_name,treatment_type, n = None):
     plt.show()
 
 
+def separate_dataframe(df):
+    genes_col = df['Genes']
+
+    dmso_cols = [col for col in df.columns if col.startswith('DMSO-F')]
+    whel_cols = [col for col in df.columns if col.startswith('WHEL-F')]
+
+    df_dmso = pd.DataFrame({'Genes': genes_col})
+    df_dmso = pd.concat([df_dmso, df[dmso_cols]], axis=1)
+
+    df_whel = pd.DataFrame({'Genes': genes_col})
+    df_whel = pd.concat([df_whel, df[whel_cols]], axis=1)
+
+    return df_dmso, df_whel
+
+
+def average_graph(dmso_df, whel_df, protein):
+    dmso = dmso_df[dmso_df["Genes"] == protein]
+    whel = whel_df[whel_df["Genes"] == protein]
+
+    dmso_values = dmso.drop(columns=['Genes']).values.flatten()
+    whel_values = whel.drop(columns=['Genes']).values.flatten()
+
+    # Get the x-axis labels (F1, F2, F3, ...)
+    x_labels = [f'F{i}' for i in range(1, len(dmso_values) + 1)]
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_labels, dmso_values, marker='o', label='DMSO Dataset')
+    plt.plot(x_labels, whel_values, marker='o', label='WHEL Dataset')
+
+    plt.xlabel('Fraction')
+    plt.ylabel(f'Log Transformed Intensity of {protein} protein')
+    plt.title(f'Log Transformed for {protein} protein')
+    plt.legend()
+    plt.grid(False)
+    plt.savefig(f'Log Transformed Intensity for {protein} protein.png')
+    plt.close()
+
+
+
 if __name__ == '__main__':
 
-    experiment = pd.read_excel("With_R1.xlsx")
-    columns_selection_df = experiment.iloc[:, [3] + list(range(5, experiment.shape[1]))]
-    columns_selection_df = columns_selection_df.fillna(0)
-    gene_whel_runs, gene_dmso_runs = whel_dmso_subset(columns_selection_df)
-    g1 = gene_dmso_runs["1"]
-    g2 = gene_dmso_runs["2"]
-    g3 = gene_dmso_runs["3"]
-    w1 = gene_whel_runs["1"]
-    w2 = gene_whel_runs["2"]
-    w3 = gene_whel_runs["3"]
+    print("Hello World!")
+
+    # #This is for the positive runs
+    # averaged_run = pd.read_excel("Positive_fraction.xlsx")
+    # dmso_df, whel_df = separate_dataframe(averaged_run)
+    #
+    # average_graph(dmso_df, whel_df, "MYCBP")
+    # average_graph(dmso_df, whel_df, "MYCBP2")
+    # average_graph(dmso_df, whel_df, "AURKA")
+    # average_graph(dmso_df, whel_df, "AURKB")
+    # average_graph(dmso_df, whel_df, "TPX2")
+
+
+    # #This is for the averaged runs
+    # averaged_run = pd.read_csv("Averaegd_runs.csv")
+    # dmso_df, whel_df = separate_dataframe(averaged_run)
+    #
+    # average_graph(dmso_df, whel_df, "MYCBP")
+    # average_graph(dmso_df, whel_df, "MYCBP2")
+    # average_graph(dmso_df, whel_df, "AURKA")
+    # average_graph(dmso_df, whel_df, "AURKB")
+    # average_graph(dmso_df, whel_df, "TPX2")
+
+
+
+    # # This is for individual runs
+    # experiment = pd.read_excel("With_R1_3_Fractioned.xlsx")
+    # columns_selection_df = experiment.iloc[:1]
+    # gene_whel_runs, gene_dmso_runs = whel_dmso_subset(columns_selection_df)
+    # g1 = gene_dmso_runs["1"]
+    # g2 = gene_dmso_runs["2"]
+    # g3 = gene_dmso_runs["3"]
+    # w1 = gene_whel_runs["1"]
+    # w2 = gene_whel_runs["2"]
+    # w3 = gene_whel_runs["3"]
 

@@ -1,5 +1,7 @@
 from read_my_file import *
 import matplotlib.pyplot as plt
+from scipy.stats import ks_2samp
+import numpy as np
 
 
 def whel_dmso_subset(df):
@@ -137,6 +139,41 @@ def transform_dataframe(df):
     return df_transformed
 
 
+def log_df(df, string_col_name='Genes'):
+    """
+    """
+    string_column = df[string_col_name]
+    numerical_columns = df.drop(columns=[string_col_name])
+
+    adjusted_numerical_columns = numerical_columns
+    log_transformed = np.log(adjusted_numerical_columns)
+
+    log_transformed_df = pd.concat([string_column, log_transformed], axis=1)
+
+    return log_transformed_df
+
+
+def ks_test_between_runs(log_dmso, log_whel):
+    genes = log_dmso.index
+    dmso_runs = sorted(set(col.split('-')[0] + '-' + col.split('-')[1] for col in log_dmso.columns))
+    whel_runs = sorted(set(col.split('-')[0] + '-' + col.split('-')[1] for col in log_whel.columns))
+
+    results = {'Genes': genes}
+
+    for whel_run in whel_runs:
+        for dmso_run in dmso_runs:
+            column_name = f"{whel_run}_{dmso_run}"
+            ks_results = []
+            for gene in genes:
+                whel_data = log_whel.loc[gene, [col for col in log_whel.columns if whel_run in col]].values
+                dmso_data = log_dmso.loc[gene, [col for col in log_dmso.columns if dmso_run in col]].values
+                ks_result = ks_2samp(whel_data, dmso_data)
+                ks_results.append([ks_result.statistic, ks_result.pvalue])
+            results[column_name] = ks_results
+
+    return pd.DataFrame(results)
+
+
 if __name__ == '__main__':
 
     print("Hello World!")
@@ -146,18 +183,62 @@ if __name__ == '__main__':
     filled_dmso = fill_na_with_half_min(df_dmso).dropna()
     filled_whel = fill_na_with_half_min(df_whel).dropna()
 
-    avg_dmso = transform_dataframe(filled_dmso)
-    avg_whel = transform_dataframe(filled_whel)
+    dmso_gene = set(filled_dmso["Genes"])
+    whel_gene = set(filled_whel["Genes"])
 
-    filled_whel.to_excel("filled_whel.xlsx", index = False)
-    filled_dmso.to_excel("filled_dmso.xlsx", index = False)
+    inter_genes = list(dmso_gene & whel_gene)
+
+    dmso_shared = filled_dmso[filled_dmso["Genes"].isin(inter_genes)]
+    whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
+
+    log_dmso = log_df(dmso_shared)
+    log_whel = log_df(whel_shared)
+
+    subset_dmso = log_dmso.set_index("Genes")
+
+    subset_whel = log_whel.set_index("Genes")
 
 
-    average_graph(avg_dmso, avg_whel, "MYCBP")
-    average_graph(avg_dmso, avg_whel, "MYCBP2")
-    average_graph(avg_dmso, avg_whel, "AURKA")
-    average_graph(avg_dmso, avg_whel, "AURKB")
-    average_graph(avg_dmso, avg_whel, "TPX2")
+    result_df = ks_test_between_runs(subset_dmso, subset_whel)
+
+
+
+
+    # avg_dmso = transform_dataframe(filled_dmso)
+    # avg_whel = transform_dataframe(filled_whel)
+    #
+    # filled_whel.to_excel("filled_whel.xlsx", index = False)
+    # filled_dmso.to_excel("filled_dmso.xlsx", index = False)
+    #
+    #
+    # average_graph(avg_dmso, avg_whel, "MYCBP")
+    # average_graph(avg_dmso, avg_whel, "MYCBP2")
+    # average_graph(avg_dmso, avg_whel, "AURKA")
+    # average_graph(avg_dmso, avg_whel, "AURKB")
+    # average_graph(avg_dmso, avg_whel, "TPX2")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # #This is for the positive runs
     # averaged_run = pd.read_excel("Positive_fraction.xlsx")

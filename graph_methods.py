@@ -143,14 +143,14 @@ if __name__ == '__main__':
 
     df_new = pd.read_csv("new_dataset.csv")
     df_dmso, df_whel = separate_dataframe(df_new)
-    filled_dmso = fill_na_with_half_min(df_dmso)
-    filled_whel = fill_na_with_half_min(df_whel)
+    filled_dmso = fill_na_with_half_min(df_dmso).dropna()
+    filled_whel = fill_na_with_half_min(df_whel).dropna()
 
     avg_dmso = transform_dataframe(filled_dmso)
     avg_whel = transform_dataframe(filled_whel)
 
-    avg_whel.to_excel("filled_whel.xlsx")
-    avg_dmso.to_excel("filled_dmso.xlsx")
+    filled_whel.to_excel("filled_whel.xlsx", index = False)
+    filled_dmso.to_excel("filled_dmso.xlsx", index = False)
 
 
     average_graph(avg_dmso, avg_whel, "MYCBP")

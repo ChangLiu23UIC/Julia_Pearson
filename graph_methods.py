@@ -174,6 +174,21 @@ def ks_test_between_runs(log_dmso, log_whel):
     return pd.DataFrame(results)
 
 
+def ks_test_total(log_dmso, log_whel):
+    genes = log_dmso.index
+    ks_results = {'Genes': genes}
+    results = []
+
+    for gene in genes:
+        dmso_data = log_dmso.loc[gene].values
+        whel_data = log_whel.loc[gene].values
+        ks_result = ks_2samp(dmso_data, whel_data)
+        results.append([ks_result.statistic, ks_result.pvalue])
+
+    ks_results['KS_Result'] = results
+    return pd.DataFrame(ks_results)
+
+
 if __name__ == '__main__':
 
     print("Hello World!")
@@ -198,8 +213,8 @@ if __name__ == '__main__':
 
     subset_whel = log_whel.set_index("Genes")
 
-
-    result_df = ks_test_between_runs(subset_dmso, subset_whel)
+    total_res = ks_test_total(subset_dmso, subset_whel)
+    # result_df = ks_test_between_runs(subset_dmso, subset_whel)
 
 
 

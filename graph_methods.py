@@ -189,10 +189,59 @@ def ks_test_total(log_dmso, log_whel):
     return pd.DataFrame(ks_results)
 
 
+def plot_ks_result_histogram(df, ks_column='KS_Result'):
+    """
+    """
+    df['KS_Result_First'] = df[ks_column].apply(lambda x: x[0])
+
+    df_sorted = df.sort_values(by='KS_Result_First', ascending=False)
+
+    unique_values = df['KS_Result_First'].unique()
+    num_bins = len(unique_values)
+
+    plt.figure(figsize=(10, 6))
+    plt.hist(df['KS_Result_First'], bins=num_bins, edgecolor='black', color='orange')
+    plt.title('Histogram of the KS Score')
+    plt.xlabel('KS Score')
+    plt.ylabel('Frequency')
+    plt.grid(False)
+    plt.show()
+
+    return df_sorted
+
+
+def plot_ks(df1, df2, gene):
+    data1 = df1.loc[gene].values
+    data2 = df2.loc[gene].values
+
+    ecdf1_x = np.sort(data1)
+    ecdf2_x = np.sort(data2)
+    ecdf1_y = np.arange(1, len(ecdf1_x) + 1) / len(ecdf1_x)
+    ecdf2_y = np.arange(1, len(ecdf2_x) + 1) / len(ecdf2_x)
+
+    ks_statistic, p_value = ks_2samp(data1, data2)
+
+    plt.step(ecdf1_x, ecdf1_y, label=f'ECDF {gene} - DMSO', where='post')
+    plt.step(ecdf2_x, ecdf2_y, label=f'ECDF {gene} - WHEL', where='post')
+
+    max_diff_index = np.argmax(np.abs(ecdf1_y - ecdf2_y))
+    plt.vlines(ecdf1_x[max_diff_index], ecdf2_y[max_diff_index], ecdf1_y[max_diff_index], colors='r', linestyle='dotted', label=f'KS Statistic: {ks_statistic:.4f}, p-value: {p_value:.4f}')
+
+    plt.title(f'Kolmogorov-Smirnov Plot for {gene}')
+    plt.xlabel('Data')
+    plt.ylabel('Empirical CDF')
+    plt.legend()
+
+    plt.savefig(f"KS_plot of {gene}.jpg")
+    plt.close()
+
+
+
 if __name__ == '__main__':
 
     print("Hello World!")
 
+    ccp = pd.read_excel("ccp.xlsx", "Atlas")
     df_new = pd.read_csv("new_dataset.csv")
     df_dmso, df_whel = separate_dataframe(df_new)
     filled_dmso = fill_na_with_half_min(df_dmso).dropna()
@@ -213,25 +262,29 @@ if __name__ == '__main__':
 
     subset_whel = log_whel.set_index("Genes")
 
-    total_res = ks_test_total(subset_dmso, subset_whel)
+    # total_res = ks_test_total(subset_dmso, subset_whel)
+
+    # sorted_df = plot_ks_result_histogram(total_res)
+
+    # join_df = pd.merge(sorted_df, ccp, on ="Genes", how = "inner")
+
     # result_df = ks_test_between_runs(subset_dmso, subset_whel)
 
-
-
-
-    # avg_dmso = transform_dataframe(filled_dmso)
-    # avg_whel = transform_dataframe(filled_whel)
+    avg_dmso = transform_dataframe(dmso_shared)
+    avg_whel = transform_dataframe(whel_shared)
     #
     # filled_whel.to_excel("filled_whel.xlsx", index = False)
     # filled_dmso.to_excel("filled_dmso.xlsx", index = False)
     #
     #
-    # average_graph(avg_dmso, avg_whel, "MYCBP")
-    # average_graph(avg_dmso, avg_whel, "MYCBP2")
     # average_graph(avg_dmso, avg_whel, "AURKA")
     # average_graph(avg_dmso, avg_whel, "AURKB")
-    # average_graph(avg_dmso, avg_whel, "TPX2")
+    # average_graph(avg_dmso, avg_whel, "PRC1")
+    # average_graph(avg_dmso, avg_whel, "KIF11")
+    # average_graph(avg_dmso, avg_whel, "CCNB1")
+    # average_graph(avg_dmso, avg_whel, "TACC3")
 
+    plot_ks(subset_dmso,subset_whel, "CDK1")
 
 
 

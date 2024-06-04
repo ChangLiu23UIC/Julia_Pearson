@@ -276,7 +276,7 @@ if __name__ == '__main__':
     # filled_whel.to_excel("filled_whel.xlsx", index = False)
     # filled_dmso.to_excel("filled_dmso.xlsx", index = False)
     #
-    #
+    # # Plot the average of run1,2,3 of the protein for DiffPoP
     # average_graph(avg_dmso, avg_whel, "AURKA")
     # average_graph(avg_dmso, avg_whel, "AURKB")
     # average_graph(avg_dmso, avg_whel, "PRC1")
@@ -284,7 +284,12 @@ if __name__ == '__main__':
     # average_graph(avg_dmso, avg_whel, "CCNB1")
     # average_graph(avg_dmso, avg_whel, "TACC3")
 
-    plot_ks(subset_dmso,subset_whel, "CDK1")
+    plot_ks(subset_dmso,subset_whel, "AURKA")
+    plot_ks(subset_dmso,subset_whel, "AURKB")
+    plot_ks(subset_dmso,subset_whel, "PRC1")
+    plot_ks(subset_dmso,subset_whel, "KIF11")
+    plot_ks(subset_dmso,subset_whel, "CCNB1")
+    plot_ks(subset_dmso,subset_whel, "TACC3")
 
 
 

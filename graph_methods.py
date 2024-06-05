@@ -101,11 +101,14 @@ def average_graph(dmso_df, whel_df, protein):
     plt.plot(x_labels, whel_values, marker='o', label='WHEL Dataset')
 
     plt.xlabel('Fraction')
-    plt.ylabel(f'Absolute Intensity of {protein} protein')
-    plt.title(f'Absolute for {protein} protein')
+    plt.ylabel(f'Log Transformed  Intensity of {protein} ')
+    plt.title(f'Log Transformed Intensity for {protein} ')
+
+    plt.ylim(10,18)
+
     plt.legend()
     plt.grid(False)
-    plt.savefig(f'Absolute Intensity for {protein} protein.png')
+    plt.savefig(f'Log Transformed Intensity for {protein} .png')
     plt.close()
 
 
@@ -228,11 +231,25 @@ def plot_ks(df1, df2, gene):
     plt.vlines(ecdf1_x[max_diff_index], ecdf2_y[max_diff_index], ecdf1_y[max_diff_index], colors='r', linestyle='dotted', label=f'KS Statistic: {ks_statistic:.4f}, p-value: {p_value:.4f}')
 
     plt.title(f'Kolmogorov-Smirnov Plot for {gene}')
-    plt.xlabel('Data')
-    plt.ylabel('Empirical CDF')
+    plt.xlabel('Log Transformed Intensity')
+    plt.ylabel('Quantile')
     plt.legend()
 
     plt.savefig(f"KS_plot of {gene}.jpg")
+    plt.close()
+
+
+def plot_hist(df, gene):
+    data1 = df.loc[gene].values
+
+    plt.hist(data1)
+
+    plt.title(f'Histogram for {gene}')
+    plt.xlabel('Log Transformed Intensity')
+    plt.ylabel('Numbers')
+    plt.legend()
+
+    plt.savefig(f"Histogram for whel {gene}.jpg")
     plt.close()
 
 
@@ -272,17 +289,20 @@ if __name__ == '__main__':
 
     avg_dmso = transform_dataframe(dmso_shared)
     avg_whel = transform_dataframe(whel_shared)
+
+    log_average_dmso = log_df(avg_dmso)
+    log_average_whel = log_df(avg_whel)
     #
     # filled_whel.to_excel("filled_whel.xlsx", index = False)
     # filled_dmso.to_excel("filled_dmso.xlsx", index = False)
     #
     # # Plot the average of run1,2,3 of the protein for DiffPoP
-    # average_graph(avg_dmso, avg_whel, "AURKA")
-    # average_graph(avg_dmso, avg_whel, "AURKB")
-    # average_graph(avg_dmso, avg_whel, "PRC1")
-    # average_graph(avg_dmso, avg_whel, "KIF11")
-    # average_graph(avg_dmso, avg_whel, "CCNB1")
-    # average_graph(avg_dmso, avg_whel, "TACC3")
+    average_graph(log_average_dmso, log_average_whel, "AURKA")
+    average_graph(log_average_dmso, log_average_whel, "AURKB")
+    average_graph(log_average_dmso, log_average_whel, "PRC1")
+    average_graph(log_average_dmso, log_average_whel, "KIF11")
+    average_graph(log_average_dmso, log_average_whel, "CCNB1")
+    average_graph(log_average_dmso, log_average_whel, "TACC3")
 
     plot_ks(subset_dmso,subset_whel, "AURKA")
     plot_ks(subset_dmso,subset_whel, "AURKB")
@@ -290,6 +310,8 @@ if __name__ == '__main__':
     plot_ks(subset_dmso,subset_whel, "KIF11")
     plot_ks(subset_dmso,subset_whel, "CCNB1")
     plot_ks(subset_dmso,subset_whel, "TACC3")
+
+    plot_hist(subset_whel, "CCNB1")
 
 
 

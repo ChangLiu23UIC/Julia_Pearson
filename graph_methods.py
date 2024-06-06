@@ -95,14 +95,14 @@ def average_graph(dmso_df, whel_df, protein):
     whel_values = whel.drop(columns=['Genes']).values.flatten()
 
     # Get the x-axis labels (F1, F2, F3, ...)
-    x_labels = [f'F{i}' for i in range(1, len(dmso_values) + 1)]
+    x_labels = ["2.62", "3.93", "5.91", "8.89", "13.38", "20.15", "30.38", "45.70", "100"]
 
     # Plotting
     plt.figure(figsize=(10, 6))
     plt.plot(x_labels, dmso_values, marker='o', label='DMSO Dataset')
     plt.plot(x_labels, whel_values, marker='o', label='WHEL Dataset')
 
-    plt.xlabel('Fraction')
+    plt.xlabel('Methanol Percentages')
     plt.ylabel(f'Log Transformed  Intensity of {protein} ')
     plt.title(f'Log Transformed Intensity for {protein} ')
 
@@ -265,19 +265,21 @@ def plot_gene_intensity(DMSO_df, whel_df, gene_name):
     plt.figure(figsize=(10, 6))
 
     fractions = [f'F{i}' for i in range(1, 10)]
+    x_labels = ["2.62", "3.93", "5.91", "8.89", "13.38", "20.15", "30.38", "45.70", "100"]
+
 
     dmso_colors = ['blue', 'dodgerblue', 'lightblue']
     whel_colors = ['red', 'orange', 'yellow']
 
     for i, run in enumerate(['n1', 'n2', 'n3']):
         intensities = [DMSO_gene_data[f'DMSO-{run}-{fraction}'].values[0] for fraction in fractions]
-        plt.plot(fractions, intensities, label=f'DMSO-{run}', marker='o', color=dmso_colors[i])
+        plt.plot(x_labels, intensities, label=f'DMSO-{run}', marker='o', color=dmso_colors[i])
 
     for i, run in enumerate(['n1', 'n2', 'n3']):
         intensities = [whel_gene_data[f'whel-{run}-{fraction}'].values[0] for fraction in fractions]
-        plt.plot(fractions, intensities, label=f'whel-{run}', marker='o', color=whel_colors[i])
+        plt.plot(x_labels, intensities, label=f'whel-{run}', marker='o', color=whel_colors[i])
 
-    plt.xlabel('Fraction')
+    plt.xlabel('Methanol Percentages')
     plt.ylabel('Log transformed Intensity')
     plt.title(f'Log transformed Intensity for {gene_name} for each DMSO and whel run')
     plt.legend()
@@ -345,6 +347,8 @@ if __name__ == '__main__':
 
     avg_log_dmso = transform_dataframe(log_dmso)
     avg_log_whel = transform_dataframe(log_whel)
+
+
     #
     # filled_whel.to_excel("filled_whel.xlsx", index = False)
     # filled_dmso.to_excel("filled_dmso.xlsx", index = False)
@@ -366,19 +370,19 @@ if __name__ == '__main__':
 
     # plot_hist(subset_whel, "CCNB1")
 
-    # plot_gene_intensity(log_dmso, log_whel, "GYG2")
-    # plot_gene_intensity(log_dmso, log_whel, "RFX7")
-    # plot_gene_intensity(log_dmso, log_whel, "SRSF6")
-    # plot_gene_intensity(log_dmso, log_whel, "CEBPG")
-    # plot_gene_intensity(log_dmso, log_whel, "CDK11B")
-    # plot_gene_intensity(log_dmso, log_whel, "CDH2")
-    #
-    # average_graph(avg_log_dmso, avg_log_whel, "GYG2")
-    # average_graph(avg_log_dmso, avg_log_whel, "RFX7")
-    # average_graph(avg_log_dmso, avg_log_whel, "SRSF6")
-    # average_graph(avg_log_dmso, avg_log_whel, "CEBPG")
-    # average_graph(avg_log_dmso, avg_log_whel, "CDK11B")
-    # average_graph(avg_log_dmso, avg_log_whel, "CDH2")
+    plot_gene_intensity(log_dmso, log_whel, "AURKA")
+    plot_gene_intensity(log_dmso, log_whel, "AURKB")
+    plot_gene_intensity(log_dmso, log_whel, "PRC1")
+    plot_gene_intensity(log_dmso, log_whel, "KIF11")
+    plot_gene_intensity(log_dmso, log_whel, "CCNB1")
+    plot_gene_intensity(log_dmso, log_whel, "TACC3")
+
+    average_graph(avg_log_dmso, avg_log_whel, "AURKA")
+    average_graph(avg_log_dmso, avg_log_whel, "AURKB")
+    average_graph(avg_log_dmso, avg_log_whel, "PRC1")
+    average_graph(avg_log_dmso, avg_log_whel, "KIF11")
+    average_graph(avg_log_dmso, avg_log_whel, "CCNB1")
+    average_graph(avg_log_dmso, avg_log_whel, "TACC3")
 
     a_of_a_dmso = one_to_five_and_to_nine_average(avg_log_dmso)
     a_of_a_whel = one_to_five_and_to_nine_average(avg_log_whel)
@@ -390,8 +394,30 @@ if __name__ == '__main__':
     #     plot_gene_intensity(log_dmso, log_whel, i)
     #     average_graph(avg_log_dmso, avg_log_whel, i)
 
+    KS_df = pd.read_excel("Sorted_KS-SCORE_with_threshold_0.1_DMSO_vs_whel.xlsx")
+    AURKA_df = KS_df[KS_df["Genes"].isin(AURKA)]
+    AURKB_df = KS_df[KS_df["Genes"].isin(AURKB)]
+    KIF11_df = KS_df[KS_df["Genes"].isin(KIF11)]
+    PRC1_df = KS_df[KS_df["Genes"].isin(PRC1)]
+    CCNB1_df = KS_df[KS_df["Genes"].isin(CCNB1)]
 
+    AURKA_df.to_excel("AURKA.xlsx", index = False)
+    AURKB_df.to_excel("AURKB.xlsx", index = False)
+    KIF11_df.to_excel("KIF11.xlsx", index = False)
+    PRC1_df.to_excel("PRC1.xlsx", index = False)
+    CCNB1_df.to_excel("CCNB1.xlsx", index = False)
 
+    AURKA_list = AURKA_df["Genes"].tolist()
+    AURKB_list = AURKB_df["Genes"].tolist()
+    KIF11_list = KIF11_df["Genes"].tolist()
+    PRC1_list = PRC1_df["Genes"].tolist()
+    CCNB1_list = CCNB1_df["Genes"].tolist()
+
+    union_set = list(union_lists_to_set(AURKA_list, AURKB_list, KIF11_list, PRC1_list, CCNB1_list))
+
+    for i in union_set:
+        plot_gene_intensity(log_dmso, log_whel, i)
+        average_graph(avg_log_dmso, avg_log_whel, i)
 
 
     # #This is for the positive runs

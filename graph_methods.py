@@ -1,8 +1,10 @@
+import pandas as pd
+
 from read_my_file import *
 import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
 import numpy as np
-
+from pathway_construction import *
 
 def whel_dmso_subset(df):
     """
@@ -104,11 +106,11 @@ def average_graph(dmso_df, whel_df, protein):
     plt.ylabel(f'Log Transformed  Intensity of {protein} ')
     plt.title(f'Log Transformed Intensity for {protein} ')
 
-    plt.ylim(10,18)
+    # plt.ylim(10,18)
 
     plt.legend()
     plt.grid(False)
-    plt.savefig(f'Log Transformed Intensity for {protein} .png')
+    plt.savefig(f'img/Average of Log Transformed Intensity for {protein} .png')
     plt.close()
 
 
@@ -254,6 +256,54 @@ def plot_hist(df, gene):
 
 
 
+
+def plot_gene_intensity(DMSO_df, whel_df, gene_name):
+    # Filter the dataframes to only include the specified gene
+    DMSO_gene_data = DMSO_df[DMSO_df['Genes'] == gene_name]
+    whel_gene_data = whel_df[whel_df['Genes'] == gene_name]
+
+    plt.figure(figsize=(10, 6))
+
+    fractions = [f'F{i}' for i in range(1, 10)]
+
+    dmso_colors = ['blue', 'dodgerblue', 'lightblue']
+    whel_colors = ['red', 'orange', 'yellow']
+
+    for i, run in enumerate(['n1', 'n2', 'n3']):
+        intensities = [DMSO_gene_data[f'DMSO-{run}-{fraction}'].values[0] for fraction in fractions]
+        plt.plot(fractions, intensities, label=f'DMSO-{run}', marker='o', color=dmso_colors[i])
+
+    for i, run in enumerate(['n1', 'n2', 'n3']):
+        intensities = [whel_gene_data[f'whel-{run}-{fraction}'].values[0] for fraction in fractions]
+        plt.plot(fractions, intensities, label=f'whel-{run}', marker='o', color=whel_colors[i])
+
+    plt.xlabel('Fraction')
+    plt.ylabel('Log transformed Intensity')
+    plt.title(f'Log transformed Intensity for {gene_name} for each DMSO and whel run')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(f'img/Log transformed Intensity for {gene_name} for each DMSO and whel run.jpg')
+    plt.close()
+
+
+def one_to_five_and_to_nine_average(df):
+    df_copy = df.copy()
+
+    df_copy['avg_1_to_5'] = df.iloc[:, 1:5].mean(axis=1)
+
+    df_copy['avg_5_to_9'] = df.iloc[:, 5:9].mean(axis=1)
+
+    df_copy['difference'] = df_copy['avg_5_to_9'] - df_copy['avg_1_to_5']
+
+    df_result = df_copy.iloc[:, [0, -3, -2, -1]]
+
+    df_filtered = df_result[df_result['avg_5_to_9'] > df_result['avg_1_to_5']]
+
+    df_sorted = df_filtered.sort_values(by='difference', ascending=False)
+
+    return df_sorted
+
+
 if __name__ == '__main__':
 
     print("Hello World!")
@@ -292,44 +342,53 @@ if __name__ == '__main__':
 
     log_average_dmso = log_df(avg_dmso)
     log_average_whel = log_df(avg_whel)
+
+    avg_log_dmso = transform_dataframe(log_dmso)
+    avg_log_whel = transform_dataframe(log_whel)
     #
     # filled_whel.to_excel("filled_whel.xlsx", index = False)
     # filled_dmso.to_excel("filled_dmso.xlsx", index = False)
     #
     # # Plot the average of run1,2,3 of the protein for DiffPoP
-    average_graph(log_average_dmso, log_average_whel, "AURKA")
-    average_graph(log_average_dmso, log_average_whel, "AURKB")
-    average_graph(log_average_dmso, log_average_whel, "PRC1")
-    average_graph(log_average_dmso, log_average_whel, "KIF11")
-    average_graph(log_average_dmso, log_average_whel, "CCNB1")
-    average_graph(log_average_dmso, log_average_whel, "TACC3")
+    # average_graph(log_average_dmso, log_average_whel, "AURKA")
+    # average_graph(log_average_dmso, log_average_whel, "AURKB")
+    # average_graph(log_average_dmso, log_average_whel, "PRC1")
+    # average_graph(log_average_dmso, log_average_whel, "KIF11")
+    # average_graph(log_average_dmso, log_average_whel, "CCNB1")
+    # average_graph(log_average_dmso, log_average_whel, "TACC3")
+    #
+    # plot_ks(subset_dmso,subset_whel, "AURKA")
+    # plot_ks(subset_dmso,subset_whel, "AURKB")
+    # plot_ks(subset_dmso,subset_whel, "PRC1")
+    # plot_ks(subset_dmso,subset_whel, "KIF11")
+    # plot_ks(subset_dmso,subset_whel, "CCNB1")
+    # plot_ks(subset_dmso,subset_whel, "TACC3")
 
-    plot_ks(subset_dmso,subset_whel, "AURKA")
-    plot_ks(subset_dmso,subset_whel, "AURKB")
-    plot_ks(subset_dmso,subset_whel, "PRC1")
-    plot_ks(subset_dmso,subset_whel, "KIF11")
-    plot_ks(subset_dmso,subset_whel, "CCNB1")
-    plot_ks(subset_dmso,subset_whel, "TACC3")
+    # plot_hist(subset_whel, "CCNB1")
 
-    plot_hist(subset_whel, "CCNB1")
+    # plot_gene_intensity(log_dmso, log_whel, "GYG2")
+    # plot_gene_intensity(log_dmso, log_whel, "RFX7")
+    # plot_gene_intensity(log_dmso, log_whel, "SRSF6")
+    # plot_gene_intensity(log_dmso, log_whel, "CEBPG")
+    # plot_gene_intensity(log_dmso, log_whel, "CDK11B")
+    # plot_gene_intensity(log_dmso, log_whel, "CDH2")
+    #
+    # average_graph(avg_log_dmso, avg_log_whel, "GYG2")
+    # average_graph(avg_log_dmso, avg_log_whel, "RFX7")
+    # average_graph(avg_log_dmso, avg_log_whel, "SRSF6")
+    # average_graph(avg_log_dmso, avg_log_whel, "CEBPG")
+    # average_graph(avg_log_dmso, avg_log_whel, "CDK11B")
+    # average_graph(avg_log_dmso, avg_log_whel, "CDH2")
 
+    a_of_a_dmso = one_to_five_and_to_nine_average(avg_log_dmso)
+    a_of_a_whel = one_to_five_and_to_nine_average(avg_log_whel)
 
+    #
+    # merged_aoa = pd.merge(a_of_a_dmso, a_of_a_whel, on= "Genes", how= "inner")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    # for i in merged_aoa["Genes"]:
+    #     plot_gene_intensity(log_dmso, log_whel, i)
+    #     average_graph(avg_log_dmso, avg_log_whel, i)
 
 
 

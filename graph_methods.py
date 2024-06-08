@@ -6,28 +6,28 @@ from scipy.stats import ks_2samp
 import numpy as np
 from pathway_construction import *
 
-def whel_dmso_subset(df):
-    """
-    Subset the dataframe into gene + whel-xxx and gene + dmso-xxx
-    :param df:
-    :return:
-    """
-    gene_column = [col for col in df.columns if col == 'Genes']
-    whel_columns = [col for col in df.columns if col.startswith('whel-')]
-    dmso_columns = [col for col in df.columns if col.startswith('DMSO-')]
-
-    gene_whel_data = df[gene_column + whel_columns]
-    gene_dmso_data = df[gene_column + dmso_columns]
-
-    dmso_runs = subset_by_run(gene_dmso_data)
-    whel_runs = subset_by_run(gene_whel_data)
-
-    return whel_runs, dmso_runs
+# def whel_dmso_subset(df):
+#     """
+#     Subset the dataframe into gene + whel-xxx and gene + dmso-xxx
+#     :param df:
+#     :return:
+#     """
+#     gene_column = [col for col in df.columns if col == 'Genes']
+#     whel_columns = [col for col in df.columns if col.startswith('whel-')]
+#     dmso_columns = [col for col in df.columns if col.startswith('DMSO-')]
+#
+#     gene_whel_data = df[gene_column + whel_columns]
+#     gene_dmso_data = df[gene_column + dmso_columns]
+#
+#     dmso_runs = subset_by_run(gene_dmso_data)
+#     whel_runs = subset_by_run(gene_whel_data)
+#
+#     return whel_runs, dmso_runs
 
 
 def subset_by_run(df):
     """
-
+    Subset my dataframe by run. This looks at the run number and subset each of them into runs.
     :param df:
     :return:
     """
@@ -38,41 +38,47 @@ def subset_by_run(df):
     subsets = {}
 
     for x in x_values:
+        # Since there are two types of runs. We need r and n individually.
         columns_with_x = [col for col in df.columns if f'-r{x}-' in col or f'-n{x}-' in col]
         columns_with_x_sorted = sorted(columns_with_x, key=lambda col: int(col.split('-F')[-1]))
         subset = pd.concat([genes_column, df[columns_with_x_sorted]], axis=1)
         subsets[x] = subset
     return subsets
 
-def graphing_methods(dataframe, gene_name,treatment_type, n = None):
-    """
-    This will plot the canonical result of the diffpop method for either whel or DMSO
-    :param df:
-    :return:
-    """
-    if gene_name not in dataframe['Genes'].values:
-        raise ValueError(f"Gene {gene_name} not found in the dataframe.")
-
-    treatment_columns = [col for col in dataframe.columns if treatment_type in col]
-    if not treatment_columns:
-        raise ValueError(f"No columns found for treatment type {treatment_type}.")
-
-    gene_row = dataframe[dataframe['Genes'] == gene_name]
-    x_labels = [col.split('-')[-1].replace('F', '') for col in treatment_columns]
-    y_values = gene_row[treatment_columns].values.flatten()
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(x_labels, y_values, marker='o')
-    for i, txt in enumerate(y_values):
-        plt.annotate(txt, (x_labels[i], y_values[i]), textcoords="offset points", xytext=(0, 10), ha='center')
-    plt.xlabel('Fraction number')
-    plt.ylabel('Intensity')
-    plt.title(f'Protein Level for {gene_name} under {treatment_type} treatment run {n} ')
-    plt.grid(False)
-    plt.show()
+# def graphing_methods(dataframe, gene_name,treatment_type, n = None):
+#     """
+#     This will plot the canonical result of the diffpop method for either whel or DMSO
+#     :param df:
+#     :return:
+#     """
+#     if gene_name not in dataframe['Genes'].values:
+#         raise ValueError(f"Gene {gene_name} not found in the dataframe.")
+#
+#     treatment_columns = [col for col in dataframe.columns if treatment_type in col]
+#     if not treatment_columns:
+#         raise ValueError(f"No columns found for treatment type {treatment_type}.")
+#
+#     gene_row = dataframe[dataframe['Genes'] == gene_name]
+#     x_labels = [col.split('-')[-1].replace('F', '') for col in treatment_columns]
+#     y_values = gene_row[treatment_columns].values.flatten()
+#
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(x_labels, y_values, marker='o')
+#     for i, txt in enumerate(y_values):
+#         plt.annotate(txt, (x_labels[i], y_values[i]), textcoords="offset points", xytext=(0, 10), ha='center')
+#     plt.xlabel('Fraction number')
+#     plt.ylabel('Intensity')
+#     plt.title(f'Protein Level for {gene_name} under {treatment_type} treatment run {n} ')
+#     plt.grid(False)
+#     plt.show()
 
 
 def separate_dataframe(df):
+    """
+    THis will seperate the dataframe into two dataframes.
+    :param df:
+    :return:
+    """
     genes_col = df['Genes']
 
     dmso_cols = [col for col in df.columns if col.startswith('DMSO-')]
@@ -88,6 +94,13 @@ def separate_dataframe(df):
 
 
 def average_graph(dmso_df, whel_df, protein):
+    """
+    Plot the Average intensities with desired dfs.
+    :param dmso_df:
+    :param whel_df:
+    :param protein:
+    :return:
+    """
     dmso = dmso_df[dmso_df["Genes"] == protein]
     whel = whel_df[whel_df["Genes"] == protein]
 
@@ -116,6 +129,9 @@ def average_graph(dmso_df, whel_df, protein):
 
 def fill_na_with_half_min(df):
     """
+    Since we have some of the empty cells. We fill them with half of the minimum in the row.
+    :param df:
+    :return:
     """
     categorical_col = df.iloc[:, 0]
     numeric_df = df.iloc[:, 1:]
@@ -126,9 +142,9 @@ def fill_na_with_half_min(df):
     return df_filled
 
 
-def transform_dataframe(df):
+def average_dataframe(df):
     """
-
+    Average the run of the dataframe for each fraction.
     :param df:
     :return:
     """
@@ -385,14 +401,14 @@ if __name__ == '__main__':
 
     # result_df = ks_test_between_runs(subset_dmso, subset_whel)
 
-    avg_dmso = transform_dataframe(dmso_shared)
-    avg_whel = transform_dataframe(whel_shared)
+    avg_dmso = average_dataframe(dmso_shared)
+    avg_whel = average_dataframe(whel_shared)
 
     log_average_dmso = log_df(avg_dmso)
     log_average_whel = log_df(avg_whel)
 
-    avg_log_dmso = transform_dataframe(log_dmso)
-    avg_log_whel = transform_dataframe(log_whel)
+    avg_log_dmso = average_dataframe(log_dmso)
+    avg_log_whel = average_dataframe(log_whel)
 
 
     #

@@ -99,7 +99,7 @@ def dataframe_work(df, column_dict):
     """
 
     results = {}
-
+    # Get the correlation within each fraction
     for key, group_columns in column_dict.items():
             results[key] = pearson_correlations(df, group_columns)
             print(f"Correlations for {key}:")
@@ -117,7 +117,7 @@ def dataframe_work_spearman(df, column_dict):
     """
 
     results = {}
-
+    # Get the correlation within each fraction
     for key, group_columns in column_dict.items():
             results[key] = spearman_correlations(df, group_columns)
             print(f"Correlations for {key}:")
@@ -161,7 +161,14 @@ def rename_column(col_name):
 
 
 def transform_correlation_dict(corr_dict):
+    """
+    Get the correlation dictionary into a dataframe for output as excel or tsv.
+    :param corr_dict:
+    :return:
+    """
     results = []
+
+    # Iterate through the dictionary and get all the combinations in the set.
     for (condition, fraction), df in corr_dict.items():
         correlations = {'Fraction': f'{condition}-{fraction}'}
         processed_pairs = set()
@@ -175,6 +182,7 @@ def transform_correlation_dict(corr_dict):
         results.append(correlations)
     final_df = pd.DataFrame(results)
 
+    #  Still need manual adjustments.
     return final_df
 
 

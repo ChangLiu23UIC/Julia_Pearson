@@ -127,6 +127,11 @@ def fill_na_with_half_min(df):
 
 
 def transform_dataframe(df):
+    """
+
+    :param df:
+    :return:
+    """
     genes = df['Genes']
 
     suffixes = df.columns.str.extract(r'-(F\d)')[0]
@@ -146,6 +151,7 @@ def transform_dataframe(df):
 
 def log_df(df, string_col_name='Genes'):
     """
+    Do a log transformation of the dataframe since it has a genes column.
     """
     string_column = df[string_col_name]
     numerical_columns = df.drop(columns=[string_col_name])
@@ -159,6 +165,12 @@ def log_df(df, string_col_name='Genes'):
 
 
 def ks_test_between_runs(log_dmso, log_whel):
+    """
+    Test the KS score between every runs for DMSO and WHel in a combination. Ex: DMSO run1 vs Whel run1, whelrun2, whelrun3.
+    :param log_dmso:
+    :param log_whel:
+    :return:
+    """
     genes = log_dmso.index
     dmso_runs = sorted(set(col.split('-')[0] + '-' + col.split('-')[1] for col in log_dmso.columns))
     whel_runs = sorted(set(col.split('-')[0] + '-' + col.split('-')[1] for col in log_whel.columns))
@@ -180,6 +192,13 @@ def ks_test_between_runs(log_dmso, log_whel):
 
 
 def ks_test_total(log_dmso, log_whel):
+    """
+    THe total score of the ks-test into a dataframe between two runs for all genes. THis is for the average scores.
+    :param log_dmso:
+    :param log_whel:
+    :return:
+    """
+
     genes = log_dmso.index
     ks_results = {'Genes': genes}
     results = []
@@ -196,6 +215,7 @@ def ks_test_total(log_dmso, log_whel):
 
 def plot_ks_result_histogram(df, ks_column='KS_Result'):
     """
+    Plot the histogram of the ks-score for downstream analysis.
     """
     df['KS_Result_First'] = df[ks_column].apply(lambda x: x[0])
 
@@ -216,6 +236,13 @@ def plot_ks_result_histogram(df, ks_column='KS_Result'):
 
 
 def plot_ks(df1, df2, gene):
+    """
+    Plot the KS plot of both DMSO and Wheldone on a specific gene.
+    :param df1:
+    :param df2:
+    :param gene:
+    :return:
+    """
     data1 = df1.loc[gene].values
     data2 = df2.loc[gene].values
 
@@ -242,6 +269,12 @@ def plot_ks(df1, df2, gene):
 
 
 def plot_hist(df, gene):
+    """
+    plot th ehistogram of the data
+    :param df:
+    :param gene:
+    :return:
+    """
     data1 = df.loc[gene].values
 
     plt.hist(data1)
@@ -258,6 +291,13 @@ def plot_hist(df, gene):
 
 
 def plot_gene_intensity(DMSO_df, whel_df, gene_name):
+    """
+    This is to plot the gene intensity with both the DMSO and Wheldone dataframe on a specific gene.
+    :param DMSO_df:
+    :param whel_df:
+    :param gene_name:
+    :return:
+    """
     # Filter the dataframes to only include the specified gene
     DMSO_gene_data = DMSO_df[DMSO_df['Genes'] == gene_name]
     whel_gene_data = whel_df[whel_df['Genes'] == gene_name]
@@ -289,6 +329,12 @@ def plot_gene_intensity(DMSO_df, whel_df, gene_name):
 
 
 def one_to_five_and_to_nine_average(df):
+    """
+    Check the difference between the Fraction 1-5 and Fraction 5-9. We only want the runs with higher average in the later
+    fraction.
+    :param df:
+    :return:
+    """
     df_copy = df.copy()
 
     df_copy['avg_1_to_5'] = df.iloc[:, 1:5].mean(axis=1)

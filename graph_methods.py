@@ -368,47 +368,119 @@ def one_to_five_and_to_nine_average(df):
     return df_sorted
 
 
+def z_score_normalization(column):
+    return (column - column.mean()) / column.std()
+
+
+def z_norm_df(df):
+    """
+    Nramalize the data with z-normalization method
+    :param df:
+    :return:
+    """
+    df_genes = df["Genes"]
+    numerical_columns = df.drop(columns=["Genes"])
+    df_standardized = numerical_columns.apply(z_score_normalization)
+    df_standardized.insert(0, 'Genes', df_genes)
+
+    return df_standardized
+
+
 if __name__ == '__main__':
 
     print("Hello World!")
 
+    # Read the files as dataframe
     ccp = pd.read_excel("ccp.xlsx", "Atlas")
     df_new = pd.read_csv("new_dataset.csv")
     df_dmso, df_whel = separate_dataframe(df_new)
     filled_dmso = fill_na_with_half_min(df_dmso).dropna()
     filled_whel = fill_na_with_half_min(df_whel).dropna()
 
+    # Get all the genes for each run and Union them
     dmso_gene = set(filled_dmso["Genes"])
     whel_gene = set(filled_whel["Genes"])
-
     inter_genes = list(dmso_gene & whel_gene)
 
+    # Subset shared genes
     dmso_shared = filled_dmso[filled_dmso["Genes"].isin(inter_genes)]
     whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
 
-    log_dmso = log_df(dmso_shared)
-    log_whel = log_df(whel_shared)
+    # Normalization
+    dmso_norm = z_norm_df(dmso_shared)
+    whel_norm = z_norm_df(whel_shared)
 
-    subset_dmso = log_dmso.set_index("Genes")
+    # Average the normalized runs
+    avg_norm_dmso = average_dataframe(dmso_norm)
+    avg_norm_whel = average_dataframe(whel_norm)
 
-    subset_whel = log_whel.set_index("Genes")
+    plot_gene_intensity(dmso_norm, whel_norm, "AURKA")
+    plot_gene_intensity(dmso_norm, whel_norm, "AURKB")
+    plot_gene_intensity(dmso_norm, whel_norm, "PRC1")
+    plot_gene_intensity(dmso_norm, whel_norm, "KIF11")
+    plot_gene_intensity(dmso_norm, whel_norm, "CCNB1")
+    plot_gene_intensity(dmso_norm, whel_norm, "TACC3")
 
-    # total_res = ks_test_total(subset_dmso, subset_whel)
+    average_graph(avg_norm_dmso, avg_norm_whel, "AURKA")
+    average_graph(avg_norm_dmso, avg_norm_whel, "AURKB")
+    average_graph(avg_norm_dmso, avg_norm_whel, "PRC1")
+    average_graph(avg_norm_dmso, avg_norm_whel, "KIF11")
+    average_graph(avg_norm_dmso, avg_norm_whel, "CCNB1")
+    average_graph(avg_norm_dmso, avg_norm_whel, "TACC3")
 
-    # sorted_df = plot_ks_result_histogram(total_res)
+    ks_test_total()
 
-    # join_df = pd.merge(sorted_df, ccp, on ="Genes", how = "inner")
+    # KS_df = pd.read_excel("Sorted_KS-SCORE_with_threshold_0.1_DMSO_vs_whel.xlsx")
+    # AURKA_df = KS_df[KS_df["Genes"].isin(AURKA)]
+    # AURKB_df = KS_df[KS_df["Genes"].isin(AURKB)]
+    # KIF11_df = KS_df[KS_df["Genes"].isin(KIF11)]
+    # PRC1_df = KS_df[KS_df["Genes"].isin(PRC1)]
+    # CCNB1_df = KS_df[KS_df["Genes"].isin(CCNB1)]
+    #
+    # AURKA_df.to_excel("AURKA.xlsx", index = False)
+    # AURKB_df.to_excel("AURKB.xlsx", index = False)
+    # KIF11_df.to_excel("KIF11.xlsx", index = False)
+    # PRC1_df.to_excel("PRC1.xlsx", index = False)
+    # CCNB1_df.to_excel("CCNB1.xlsx", index = False)
+    #
+    # AURKA_list = AURKA_df["Genes"].tolist()
+    # AURKB_list = AURKB_df["Genes"].tolist()
+    # KIF11_list = KIF11_df["Genes"].tolist()
+    # PRC1_list = PRC1_df["Genes"].tolist()
+    # CCNB1_list = CCNB1_df["Genes"].tolist()
+    #
+    # union_set = list(union_lists_to_set(AURKA_list, AURKB_list, KIF11_list, PRC1_list, CCNB1_list))
+    #
+    # for i in union_set:
+    #     plot_gene_intensity(log_dmso, log_whel, i)
+    #     average_graph(avg_log_dmso, avg_log_whel, i)
+    #
 
-    # result_df = ks_test_between_runs(subset_dmso, subset_whel)
+    # Log Transformed
+    # log_dmso = log_df(dmso_shared)
+    # log_whel = log_df(whel_shared)
+    #
+    # subset_dmso = log_dmso.set_index("Genes")
+    #
+    # subset_whel = log_whel.set_index("Genes")
+    #
+    # # total_res = ks_test_total(subset_dmso, subset_whel)
+    #
+    # # sorted_df = plot_ks_result_histogram(total_res)
+    #
+    # # join_df = pd.merge(sorted_df, ccp, on ="Genes", how = "inner")
+    #
+    # # result_df = ks_test_between_runs(subset_dmso, subset_whel)
+    #
+    # avg_dmso = average_dataframe(dmso_shared)
+    # avg_whel = average_dataframe(whel_shared)
+    #
+    # log_average_dmso = log_df(avg_dmso)
+    # log_average_whel = log_df(avg_whel)
+    #
+    # avg_log_dmso = average_dataframe(log_dmso)
+    # avg_log_whel = average_dataframe(log_whel)
 
-    avg_dmso = average_dataframe(dmso_shared)
-    avg_whel = average_dataframe(whel_shared)
-
-    log_average_dmso = log_df(avg_dmso)
-    log_average_whel = log_df(avg_whel)
-
-    avg_log_dmso = average_dataframe(log_dmso)
-    avg_log_whel = average_dataframe(log_whel)
 
 
     #
@@ -432,22 +504,22 @@ if __name__ == '__main__':
 
     # plot_hist(subset_whel, "CCNB1")
 
-    plot_gene_intensity(log_dmso, log_whel, "AURKA")
-    plot_gene_intensity(log_dmso, log_whel, "AURKB")
-    plot_gene_intensity(log_dmso, log_whel, "PRC1")
-    plot_gene_intensity(log_dmso, log_whel, "KIF11")
-    plot_gene_intensity(log_dmso, log_whel, "CCNB1")
-    plot_gene_intensity(log_dmso, log_whel, "TACC3")
-
-    average_graph(avg_log_dmso, avg_log_whel, "AURKA")
-    average_graph(avg_log_dmso, avg_log_whel, "AURKB")
-    average_graph(avg_log_dmso, avg_log_whel, "PRC1")
-    average_graph(avg_log_dmso, avg_log_whel, "KIF11")
-    average_graph(avg_log_dmso, avg_log_whel, "CCNB1")
-    average_graph(avg_log_dmso, avg_log_whel, "TACC3")
-
-    a_of_a_dmso = one_to_five_and_to_nine_average(avg_log_dmso)
-    a_of_a_whel = one_to_five_and_to_nine_average(avg_log_whel)
+    # plot_gene_intensity(log_dmso, log_whel, "AURKA")
+    # plot_gene_intensity(log_dmso, log_whel, "AURKB")
+    # plot_gene_intensity(log_dmso, log_whel, "PRC1")
+    # plot_gene_intensity(log_dmso, log_whel, "KIF11")
+    # plot_gene_intensity(log_dmso, log_whel, "CCNB1")
+    # plot_gene_intensity(log_dmso, log_whel, "TACC3")
+    #
+    # average_graph(avg_log_dmso, avg_log_whel, "AURKA")
+    # average_graph(avg_log_dmso, avg_log_whel, "AURKB")
+    # average_graph(avg_log_dmso, avg_log_whel, "PRC1")
+    # average_graph(avg_log_dmso, avg_log_whel, "KIF11")
+    # average_graph(avg_log_dmso, avg_log_whel, "CCNB1")
+    # average_graph(avg_log_dmso, avg_log_whel, "TACC3")
+    #
+    # a_of_a_dmso = one_to_five_and_to_nine_average(avg_log_dmso)
+    # a_of_a_whel = one_to_five_and_to_nine_average(avg_log_whel)
 
     #
     # merged_aoa = pd.merge(a_of_a_dmso, a_of_a_whel, on= "Genes", how= "inner")
@@ -456,31 +528,31 @@ if __name__ == '__main__':
     #     plot_gene_intensity(log_dmso, log_whel, i)
     #     average_graph(avg_log_dmso, avg_log_whel, i)
 
-    KS_df = pd.read_excel("Sorted_KS-SCORE_with_threshold_0.1_DMSO_vs_whel.xlsx")
-    AURKA_df = KS_df[KS_df["Genes"].isin(AURKA)]
-    AURKB_df = KS_df[KS_df["Genes"].isin(AURKB)]
-    KIF11_df = KS_df[KS_df["Genes"].isin(KIF11)]
-    PRC1_df = KS_df[KS_df["Genes"].isin(PRC1)]
-    CCNB1_df = KS_df[KS_df["Genes"].isin(CCNB1)]
-
-    AURKA_df.to_excel("AURKA.xlsx", index = False)
-    AURKB_df.to_excel("AURKB.xlsx", index = False)
-    KIF11_df.to_excel("KIF11.xlsx", index = False)
-    PRC1_df.to_excel("PRC1.xlsx", index = False)
-    CCNB1_df.to_excel("CCNB1.xlsx", index = False)
-
-    AURKA_list = AURKA_df["Genes"].tolist()
-    AURKB_list = AURKB_df["Genes"].tolist()
-    KIF11_list = KIF11_df["Genes"].tolist()
-    PRC1_list = PRC1_df["Genes"].tolist()
-    CCNB1_list = CCNB1_df["Genes"].tolist()
-
-    union_set = list(union_lists_to_set(AURKA_list, AURKB_list, KIF11_list, PRC1_list, CCNB1_list))
-
-    for i in union_set:
-        plot_gene_intensity(log_dmso, log_whel, i)
-        average_graph(avg_log_dmso, avg_log_whel, i)
-
+    # KS_df = pd.read_excel("Sorted_KS-SCORE_with_threshold_0.1_DMSO_vs_whel.xlsx")
+    # AURKA_df = KS_df[KS_df["Genes"].isin(AURKA)]
+    # AURKB_df = KS_df[KS_df["Genes"].isin(AURKB)]
+    # KIF11_df = KS_df[KS_df["Genes"].isin(KIF11)]
+    # PRC1_df = KS_df[KS_df["Genes"].isin(PRC1)]
+    # CCNB1_df = KS_df[KS_df["Genes"].isin(CCNB1)]
+    #
+    # AURKA_df.to_excel("AURKA.xlsx", index = False)
+    # AURKB_df.to_excel("AURKB.xlsx", index = False)
+    # KIF11_df.to_excel("KIF11.xlsx", index = False)
+    # PRC1_df.to_excel("PRC1.xlsx", index = False)
+    # CCNB1_df.to_excel("CCNB1.xlsx", index = False)
+    #
+    # AURKA_list = AURKA_df["Genes"].tolist()
+    # AURKB_list = AURKB_df["Genes"].tolist()
+    # KIF11_list = KIF11_df["Genes"].tolist()
+    # PRC1_list = PRC1_df["Genes"].tolist()
+    # CCNB1_list = CCNB1_df["Genes"].tolist()
+    #
+    # union_set = list(union_lists_to_set(AURKA_list, AURKB_list, KIF11_list, PRC1_list, CCNB1_list))
+    #
+    # for i in union_set:
+    #     plot_gene_intensity(log_dmso, log_whel, i)
+    #     average_graph(avg_log_dmso, avg_log_whel, i)
+    #
 
     # #This is for the positive runs
     # averaged_run = pd.read_excel("Positive_fraction.xlsx")

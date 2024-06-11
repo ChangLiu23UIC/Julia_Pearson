@@ -4,6 +4,7 @@ from read_my_file import *
 import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
 import numpy as np
+from sklearn.preprocessing import QuantileTransformer
 from pathway_construction import *
 import seaborn as sns
 
@@ -341,7 +342,7 @@ def plot_gene_intensity(DMSO_df, whel_df, gene_name, normalize_mehod):
     x_labels = [f"F{i}" for i in range(0,9)]
     plt.xticks(ticks=range(1, 10), labels=x_labels)
 
-    plt.ylim(-0.2, 1)
+    # plt.ylim(-0.2, 1)
 
     plt.xlabel('Fraction')
     plt.ylabel(f'{normalize_mehod} normalized Intensity')
@@ -350,7 +351,8 @@ def plot_gene_intensity(DMSO_df, whel_df, gene_name, normalize_mehod):
     plt.grid(True)
 
     # Save the plot
-    plt.show()
+    plt.savefig(f"img/{normalize_mehod} normalized Intensity for {gene_name} for each DMSO and Whel run.png")
+    plt.close()
 
 
 def one_to_five_and_to_nine_average(df):
@@ -415,40 +417,141 @@ def nsaf_normalization(df):
     return nsaf_df
 
 
+def tic_normalization(df):
+    """
+    Perform TIC normalization on the given DataFrame.
+    """
+    # Extract the columns to normalize (the first column is 'Genes')
+    intensity_columns = df.columns[1:]
+
+    # Calculate the total ion current for each sample
+    tic = df[intensity_columns].sum(axis=0)
+
+    # Perform TIC normalization
+    df_normalized = df.copy()
+    df_normalized[intensity_columns] = df[intensity_columns].div(tic, axis=1)
+
+    return df_normalized
+
+
+def median_normalization(df):
+    """
+    Perform median normalization on the given DataFrame.
+    """
+    # Extract the columns to normalize (the first column is 'Genes')
+    intensity_columns = df.columns[1:]
+
+    # Calculate the median intensity for each sample
+    median_intensities = df[intensity_columns].median(axis=0)
+
+    # Perform median normalization
+    df_normalized = df.copy()
+    df_normalized[intensity_columns] = df[intensity_columns].div(median_intensities, axis=1)
+
+    return df_normalized
+
+
+def quantile_normalization(df):
+    """
+    Perform quantile normalization on the given DataFrame.
+    """
+    # Extract the columns to normalize (the first column is 'Genes')
+    genes_column = df.iloc[:, 0]
+    intensity_columns = df.columns[1:]
+
+    # Initialize the QuantileTransformer
+    transformer = QuantileTransformer(output_distribution='uniform', random_state=0)
+
+    # Perform quantile normalization
+    df_normalized = df.copy()
+    df_normalized[intensity_columns] = transformer.fit_transform(df[intensity_columns])
+
+    df_normalized.iloc[:, 0] = genes_column
+
+    return df_normalized
+
+
+ccp = pd.read_excel("ccp.xlsx", "Atlas")
+protein_length = pd.read_csv("protein.tsv", delimiter= "\t")
+protein_length_2 = pd.read_csv("protein_rerun.tsv", delimiter="\t")
+protein_length_df = protein_length[["Genes","Length"]]
+protein_length_df_2 = protein_length_2[["Genes","Length"]]
+union_protein_length = pd.concat([protein_length_df, protein_length_df_2])
+
+df_new = pd.read_csv("new_dataset.csv")
+df_dmso, df_whel = separate_dataframe(df_new)
+filled_dmso = fill_na_with_half_min(df_dmso).dropna()
+filled_whel = fill_na_with_half_min(df_whel).dropna()
+
+# Get all the genes for each run and Union them
+dmso_gene = set(filled_dmso["Genes"])
+whel_gene = set(filled_whel["Genes"])
+inter_genes = list(dmso_gene & whel_gene)
+
+# Subset shared genes
+dmso_shared = filled_dmso[filled_dmso["Genes"].isin(inter_genes)]
+whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
+
 if __name__ == '__main__':
 
     print("Hello World!")
 
     # Read the files as dataframe
-    ccp = pd.read_excel("ccp.xlsx", "Atlas")
-    protein_length = pd.read_csv("protein.tsv", delimiter= "\t")
-    protein_length_2 = pd.read_csv("protein_rerun.tsv", delimiter="\t")
-    protein_length_df = protein_length[["Genes","Length"]]
-    protein_length_df_2 = protein_length_2[["Genes","Length"]]
-    union_protein_length = pd.concat([protein_length_df, protein_length_df_2])
+    # ccp = pd.read_excel("ccp.xlsx", "Atlas")
+    # protein_length = pd.read_csv("protein.tsv", delimiter= "\t")
+    # protein_length_2 = pd.read_csv("protein_rerun.tsv", delimiter="\t")
+    # protein_length_df = protein_length[["Genes","Length"]]
+    # protein_length_df_2 = protein_length_2[["Genes","Length"]]
+    # union_protein_length = pd.concat([protein_length_df, protein_length_df_2])
+    #
+    # df_new = pd.read_csv("new_dataset.csv")
+    # df_dmso, df_whel = separate_dataframe(df_new)
+    # filled_dmso = fill_na_with_half_min(df_dmso).dropna()
+    # filled_whel = fill_na_with_half_min(df_whel).dropna()
+    #
+    # # Get all the genes for each run and Union them
+    # dmso_gene = set(filled_dmso["Genes"])
+    # whel_gene = set(filled_whel["Genes"])
+    # inter_genes = list(dmso_gene & whel_gene)
+    #
+    # # Subset shared genes
+    # dmso_shared = filled_dmso[filled_dmso["Genes"].isin(inter_genes)]
+    # whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
 
-    df_new = pd.read_csv("new_dataset.csv")
-    df_dmso, df_whel = separate_dataframe(df_new)
-    filled_dmso = fill_na_with_half_min(df_dmso).dropna()
-    filled_whel = fill_na_with_half_min(df_whel).dropna()
 
-    # Get all the genes for each run and Union them
-    dmso_gene = set(filled_dmso["Genes"])
-    whel_gene = set(filled_whel["Genes"])
-    inter_genes = list(dmso_gene & whel_gene)
-
-    # Subset shared genes
-    dmso_shared = filled_dmso[filled_dmso["Genes"].isin(inter_genes)]
-    whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
-
+    """ 
+    # The NSFA normalization
+    """
     # Add the protein length for NSFA method
     nsfa_df_dmso = pd.merge(dmso_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
     nsfa_df_whel = pd.merge(whel_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
 
     nsaf_normalized_dmso = nsaf_normalization(nsfa_df_dmso)
     nsaf_normalized_whel = nsaf_normalization(nsfa_df_whel)
+    
 
-    plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, "H2AZ1", "NSAF")
+
+    """
+    The TIC normalization
+    """
+    tic_normalized_dmso = tic_normalization(dmso_shared)
+    tic_normalized_whel = tic_normalization(whel_shared)
+
+    """
+    Median normalization
+    """
+    median_normalized_dmso = median_normalization(dmso_shared)
+    median_normalized_whel = median_normalization(whel_shared)
+
+    """
+    Quantile normalization
+    """
+    quantile_normalized_dmso = quantile_normalization(dmso_shared)
+    quantile_normalized_whel = quantile_normalization(whel_shared)
+
+    # Plot nsaf normalizations
+    for i in union_set:
+        plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
 
     """
     This part is the Z-Norm normalization
@@ -476,30 +579,7 @@ if __name__ == '__main__':
     # average_graph(avg_norm_dmso, avg_norm_whel, "TACC3")
     """
 
-    # KS_df = pd.read_excel("Sorted_KS-SCORE_with_threshold_0.1_DMSO_vs_whel.xlsx")
-    # AURKA_df = KS_df[KS_df["Genes"].isin(AURKA)]
-    # AURKB_df = KS_df[KS_df["Genes"].isin(AURKB)]
-    # KIF11_df = KS_df[KS_df["Genes"].isin(KIF11)]
-    # PRC1_df = KS_df[KS_df["Genes"].isin(PRC1)]
-    # CCNB1_df = KS_df[KS_df["Genes"].isin(CCNB1)]
-    #
-    # AURKA_df.to_excel("AURKA.xlsx", index = False)
-    # AURKB_df.to_excel("AURKB.xlsx", index = False)
-    # KIF11_df.to_excel("KIF11.xlsx", index = False)
-    # PRC1_df.to_excel("PRC1.xlsx", index = False)
-    # CCNB1_df.to_excel("CCNB1.xlsx", index = False)
-    #
-    # AURKA_list = AURKA_df["Genes"].tolist()
-    # AURKB_list = AURKB_df["Genes"].tolist()
-    # KIF11_list = KIF11_df["Genes"].tolist()
-    # PRC1_list = PRC1_df["Genes"].tolist()
-    # CCNB1_list = CCNB1_df["Genes"].tolist()
-    #
-    # union_set = list(union_lists_to_set(AURKA_list, AURKB_list, KIF11_list, PRC1_list, CCNB1_list))
-    #
-    # for i in union_set:
-    #     plot_gene_intensity(log_dmso, log_whel, i)
-    #     average_graph(avg_log_dmso, avg_log_whel, i)
+
     #
 
     # Log Transformed

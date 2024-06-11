@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
 import numpy as np
 from pathway_construction import *
+import seaborn as sns
 
 # def whel_dmso_subset(df):
 #     """
@@ -306,7 +307,7 @@ def plot_hist(df, gene):
 
 
 
-def plot_gene_intensity(DMSO_df, whel_df, gene_name):
+def plot_gene_intensity(DMSO_df, whel_df, gene_name, normalize_mehod):
     """
     This is to plot the gene intensity with both the DMSO and Wheldone dataframe on a specific gene.
     :param DMSO_df:
@@ -318,30 +319,38 @@ def plot_gene_intensity(DMSO_df, whel_df, gene_name):
     DMSO_gene_data = DMSO_df[DMSO_df['Genes'] == gene_name]
     whel_gene_data = whel_df[whel_df['Genes'] == gene_name]
 
-    plt.figure(figsize=(10, 6))
+    # Reshape the DataFrames to long format
+    DMSO_long = pd.melt(DMSO_gene_data, id_vars=['Genes'], var_name='Fraction', value_name='Intensity')
+    whel_long = pd.melt(whel_gene_data, id_vars=['Genes'], var_name='Fraction', value_name='Intensity')
 
-    fractions = [f'F{i}' for i in range(1, 10)]
-    x_labels = ["2.62", "3.93", "5.91", "8.89", "13.38", "20.15", "30.38", "45.70", "100"]
+    # Extract run and fraction information
+    DMSO_long[['Treatment', 'Run', 'Fraction']] = DMSO_long['Fraction'].str.extract(r'(DMSO)-n(\d+)-F(\d+)')
+    whel_long[['Treatment', 'Run', 'Fraction']] = whel_long['Fraction'].str.extract(r'(whel)-n(\d+)-F(\d+)')
 
+    # Combine the two DataFrames
+    combined_df = pd.concat([DMSO_long, whel_long])
 
-    dmso_colors = ['blue', 'dodgerblue', 'lightblue']
-    whel_colors = ['red', 'orange', 'yellow']
+    # Convert relevant columns to numeric
+    combined_df['Run'] = pd.to_numeric(combined_df['Run'])
+    combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
 
-    for i, run in enumerate(['n1', 'n2', 'n3']):
-        intensities = [DMSO_gene_data[f'DMSO-{run}-{fraction}'].values[0] for fraction in fractions]
-        plt.plot(x_labels, intensities, label=f'DMSO-{run}', marker='o', color=dmso_colors[i])
+    plt.figure(figsize=(12, 8))
+    sns.lineplot(data=combined_df, x='Fraction', y='Intensity', hue='Treatment', style='Treatment', markers=True,
+                 errorbar ='sd', err_style='band')
 
-    for i, run in enumerate(['n1', 'n2', 'n3']):
-        intensities = [whel_gene_data[f'whel-{run}-{fraction}'].values[0] for fraction in fractions]
-        plt.plot(x_labels, intensities, label=f'whel-{run}', marker='o', color=whel_colors[i])
+    x_labels = [f"F{i}" for i in range(0,9)]
+    plt.xticks(ticks=range(1, 10), labels=x_labels)
 
-    plt.xlabel('Methanol Percentages')
-    plt.ylabel('Log transformed Intensity')
-    plt.title(f'Log transformed Intensity for {gene_name} for each DMSO and whel run')
-    plt.legend()
+    plt.ylim(-0.2, 1)
+
+    plt.xlabel('Fraction')
+    plt.ylabel(f'{normalize_mehod} normalized Intensity')
+    plt.title(f'{normalize_mehod} normalized Intensity for {gene_name} for each DMSO and Whel run')
+    plt.legend(title='Treatment')
     plt.grid(True)
-    plt.savefig(f'img/Log transformed Intensity for {gene_name} for each DMSO and whel run.jpg')
-    plt.close()
+
+    # Save the plot
+    plt.show()
 
 
 def one_to_five_and_to_nine_average(df):
@@ -413,7 +422,10 @@ if __name__ == '__main__':
     # Read the files as dataframe
     ccp = pd.read_excel("ccp.xlsx", "Atlas")
     protein_length = pd.read_csv("protein.tsv", delimiter= "\t")
+    protein_length_2 = pd.read_csv("protein_rerun.tsv", delimiter="\t")
     protein_length_df = protein_length[["Genes","Length"]]
+    protein_length_df_2 = protein_length_2[["Genes","Length"]]
+    union_protein_length = pd.concat([protein_length_df, protein_length_df_2])
 
     df_new = pd.read_csv("new_dataset.csv")
     df_dmso, df_whel = separate_dataframe(df_new)
@@ -430,12 +442,13 @@ if __name__ == '__main__':
     whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
 
     # Add the protein length for NSFA method
-    nsfa_df_dmso = pd.merge(dmso_shared, protein_length_df, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
-    nsfa_df_whel = pd.merge(whel_shared, protein_length_df, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
+    nsfa_df_dmso = pd.merge(dmso_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
+    nsfa_df_whel = pd.merge(whel_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
 
     nsaf_normalized_dmso = nsaf_normalization(nsfa_df_dmso)
     nsaf_normalized_whel = nsaf_normalization(nsfa_df_whel)
 
+    plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, "H2AZ1", "NSAF")
 
     """
     This part is the Z-Norm normalization

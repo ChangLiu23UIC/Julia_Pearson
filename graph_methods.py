@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.preprocessing import QuantileTransformer
 from pathway_construction import *
 import seaborn as sns
+from Normalization_methods import *
 
 # def whel_dmso_subset(df):
 #     """
@@ -379,97 +380,6 @@ def one_to_five_and_to_nine_average(df):
     return df_sorted
 
 
-def z_score_normalization(column):
-    return (column - column.mean()) / column.std()
-
-
-def z_norm_df(df):
-    """
-    Nramalize the data with z-normalization method
-    :param df:
-    :return:
-    """
-    df_genes = df["Genes"]
-    numerical_columns = df.drop(columns=["Genes"])
-    df_standardized = numerical_columns.apply(z_score_normalization)
-    df_standardized.insert(0, 'Genes', df_genes)
-
-    return df_standardized
-
-
-def nsaf_normalization(df):
-    """
-    Perform NSAF normalization to the given df for all columns despite the first ("Genes") and the last ("Length") column
-    :param df:
-    :return:
-    """
-    first_column = df.columns[0]
-    run_columns = df.columns[1:-1]
-    length_column = df.columns[-1]
-    nsaf_df = pd.DataFrame(df[first_column])
-
-    # NSAF for each column.
-    for run in run_columns:
-        df[f'SAF_{run}'] = df[run] / df[length_column]
-        total_saf = df[f'SAF_{run}'].sum()
-        nsaf_df[f'{run}'] = df[f'SAF_{run}'] / total_saf
-
-    return nsaf_df
-
-
-def tic_normalization(df):
-    """
-    Perform TIC normalization on the given DataFrame.
-    """
-    # Extract the columns to normalize (the first column is 'Genes')
-    intensity_columns = df.columns[1:]
-
-    # Calculate the total ion current for each sample
-    tic = df[intensity_columns].sum(axis=0)
-
-    # Perform TIC normalization
-    df_normalized = df.copy()
-    df_normalized[intensity_columns] = df[intensity_columns].div(tic, axis=1)
-
-    return df_normalized
-
-
-def median_normalization(df):
-    """
-    Perform median normalization on the given DataFrame.
-    """
-    # Extract the columns to normalize (the first column is 'Genes')
-    intensity_columns = df.columns[1:]
-
-    # Calculate the median intensity for each sample
-    median_intensities = df[intensity_columns].median(axis=0)
-
-    # Perform median normalization
-    df_normalized = df.copy()
-    df_normalized[intensity_columns] = df[intensity_columns].div(median_intensities, axis=1)
-
-    return df_normalized
-
-
-def quantile_normalization(df):
-    """
-    Perform quantile normalization on the given DataFrame.
-    """
-    # Extract the columns to normalize (the first column is 'Genes')
-    genes_column = df.iloc[:, 0]
-    intensity_columns = df.columns[1:]
-
-    # Initialize the QuantileTransformer
-    transformer = QuantileTransformer(output_distribution='uniform', random_state=0)
-
-    # Perform quantile normalization
-    df_normalized = df.copy()
-    df_normalized[intensity_columns] = transformer.fit_transform(df[intensity_columns])
-
-    df_normalized.iloc[:, 0] = genes_column
-
-    return df_normalized
-
 
 ccp = pd.read_excel("ccp.xlsx", "Atlas")
 protein_length = pd.read_csv("protein.tsv", delimiter= "\t")
@@ -549,9 +459,15 @@ if __name__ == '__main__':
     quantile_normalized_dmso = quantile_normalization(dmso_shared)
     quantile_normalized_whel = quantile_normalization(whel_shared)
 
+    """
+    Z-score normalization
+    """
+    z_normalized_dmso = z_normalization(dmso_shared)
+    z_normalized_whel = z_normalization(whel_shared)
+
     # Plot nsaf normalizations
     for i in union_set:
-        plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
+        plot_gene_intensity(quantile_normalized_dmso, quantile_normalized_whel, i, "Quantile")
 
     """
     This part is the Z-Norm normalization

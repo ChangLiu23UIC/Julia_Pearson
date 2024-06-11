@@ -1,5 +1,6 @@
 import pandas as pd
 from itertools import combinations
+from graph_methods import *
 
 def extract_name(column_path):
     """
@@ -185,6 +186,27 @@ def transform_correlation_dict(corr_dict):
     #  Still need manual adjustments.
     return final_df
 
+# Read all the files needed
+ccp = pd.read_excel("ccp.xlsx", "Atlas")
+protein_length = pd.read_csv("protein.tsv", delimiter= "\t")
+protein_length_2 = pd.read_csv("protein_rerun.tsv", delimiter="\t")
+protein_length_df = protein_length[["Genes","Length"]]
+protein_length_df_2 = protein_length_2[["Genes","Length"]]
+union_protein_length = pd.concat([protein_length_df, protein_length_df_2])
+
+df_new = pd.read_csv("new_dataset.csv")
+df_dmso, df_whel = separate_dataframe(df_new)
+filled_dmso = fill_na_with_half_min(df_dmso).dropna()
+filled_whel = fill_na_with_half_min(df_whel).dropna()
+
+# Get all the genes for each run and Union them
+dmso_gene = set(filled_dmso["Genes"])
+whel_gene = set(filled_whel["Genes"])
+inter_genes = list(dmso_gene & whel_gene)
+
+# Subset shared genes
+dmso_shared = filled_dmso[filled_dmso["Genes"].isin(inter_genes)]
+whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
 
 if __name__ == '__main__':
     print("Hello")

@@ -386,12 +386,35 @@ def z_norm_df(df):
     return df_standardized
 
 
+def nsaf_normalization(df):
+    """
+    Perform NSAF normalization to the given df for all columns despite the first ("Genes") and the last ("Length") column
+    :param df:
+    :return:
+    """
+    first_column = df.columns[0]
+    run_columns = df.columns[1:-1]
+    length_column = df.columns[-1]
+    nsaf_df = pd.DataFrame(df[first_column])
+
+    # NSAF for each column.
+    for run in run_columns:
+        df[f'SAF_{run}'] = df[run] / df[length_column]
+        total_saf = df[f'SAF_{run}'].sum()
+        nsaf_df[f'{run}'] = df[f'SAF_{run}'] / total_saf
+
+    return nsaf_df
+
+
 if __name__ == '__main__':
 
     print("Hello World!")
 
     # Read the files as dataframe
     ccp = pd.read_excel("ccp.xlsx", "Atlas")
+    protein_length = pd.read_csv("protein.tsv", delimiter= "\t")
+    protein_length_df = protein_length[["Genes","Length"]]
+
     df_new = pd.read_csv("new_dataset.csv")
     df_dmso, df_whel = separate_dataframe(df_new)
     filled_dmso = fill_na_with_half_min(df_dmso).dropna()
@@ -406,29 +429,39 @@ if __name__ == '__main__':
     dmso_shared = filled_dmso[filled_dmso["Genes"].isin(inter_genes)]
     whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
 
-    # Normalization
-    dmso_norm = z_norm_df(dmso_shared)
-    whel_norm = z_norm_df(whel_shared)
+    # Add the protein length for NSFA method
+    nsfa_df_dmso = pd.merge(dmso_shared, protein_length_df, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
+    nsfa_df_whel = pd.merge(whel_shared, protein_length_df, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
 
-    # Average the normalized runs
-    avg_norm_dmso = average_dataframe(dmso_norm)
-    avg_norm_whel = average_dataframe(whel_norm)
+    nsaf_normalized_dmso = nsaf_normalization(nsfa_df_dmso)
+    nsaf_normalized_whel = nsaf_normalization(nsfa_df_whel)
 
-    plot_gene_intensity(dmso_norm, whel_norm, "AURKA")
-    plot_gene_intensity(dmso_norm, whel_norm, "AURKB")
-    plot_gene_intensity(dmso_norm, whel_norm, "PRC1")
-    plot_gene_intensity(dmso_norm, whel_norm, "KIF11")
-    plot_gene_intensity(dmso_norm, whel_norm, "CCNB1")
-    plot_gene_intensity(dmso_norm, whel_norm, "TACC3")
 
-    average_graph(avg_norm_dmso, avg_norm_whel, "AURKA")
-    average_graph(avg_norm_dmso, avg_norm_whel, "AURKB")
-    average_graph(avg_norm_dmso, avg_norm_whel, "PRC1")
-    average_graph(avg_norm_dmso, avg_norm_whel, "KIF11")
-    average_graph(avg_norm_dmso, avg_norm_whel, "CCNB1")
-    average_graph(avg_norm_dmso, avg_norm_whel, "TACC3")
-
-    ks_test_total()
+    """
+    This part is the Z-Norm normalization
+    
+    # # Z-Norm Normalization
+    # dmso_norm = z_norm_df(dmso_shared)
+    # whel_norm = z_norm_df(whel_shared)
+    # 
+    # # Average the normalized runs
+    # avg_norm_dmso = average_dataframe(dmso_norm)
+    # avg_norm_whel = average_dataframe(whel_norm)
+    # 
+    # plot_gene_intensity(dmso_norm, whel_norm, "AURKA")
+    # plot_gene_intensity(dmso_norm, whel_norm, "AURKB")
+    # plot_gene_intensity(dmso_norm, whel_norm, "PRC1")
+    # plot_gene_intensity(dmso_norm, whel_norm, "KIF11")
+    # plot_gene_intensity(dmso_norm, whel_norm, "CCNB1")
+    # plot_gene_intensity(dmso_norm, whel_norm, "TACC3")
+    # 
+    # average_graph(avg_norm_dmso, avg_norm_whel, "AURKA")
+    # average_graph(avg_norm_dmso, avg_norm_whel, "AURKB")
+    # average_graph(avg_norm_dmso, avg_norm_whel, "PRC1")
+    # average_graph(avg_norm_dmso, avg_norm_whel, "KIF11")
+    # average_graph(avg_norm_dmso, avg_norm_whel, "CCNB1")
+    # average_graph(avg_norm_dmso, avg_norm_whel, "TACC3")
+    """
 
     # KS_df = pd.read_excel("Sorted_KS-SCORE_with_threshold_0.1_DMSO_vs_whel.xlsx")
     # AURKA_df = KS_df[KS_df["Genes"].isin(AURKA)]

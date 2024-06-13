@@ -39,37 +39,37 @@ def nsaf_method(df):
     return df
 
 
-def nsaf_normalization(df_f):
-    """
-    Perform NSAF normalization to the given df for all columns despite the first ("Genes") and the last ("Length") column
-    :param df:
-    :return:
-    """
-    df = df_f.copy()
-    first_column = df.columns[0]
-    run_columns = df.columns[1:-2]
-    length_column = 'Length'
-    total_spec_column = "Total Spectral Count"
-
-    # Create a new DataFrame to store NSAF results
-    nsaf_df = pd.DataFrame(df[first_column])
-
-    # Calculate SAF for each protein
-    df['SAF'] = df[total_spec_column] / df[length_column]
-
-    # Calculate the total SAF for the sample
-    total_saf = df['SAF'].sum()
-
-    # Calculate NSAF for each protein
-    df['NSAF'] = df['SAF'] / total_saf
-
-    # Multiply NSAF by the intensity for each run
-    for run in run_columns:
-        nsaf_intensity_column = f'{run}'
-        df[nsaf_intensity_column] = df['NSAF'] * df[run]
-        nsaf_df[nsaf_intensity_column] = df[nsaf_intensity_column]
-
-    return nsaf_df
+# def nsaf_normalization(df_f):
+#     """
+#     Perform NSAF normalization to the given df for all columns despite the first ("Genes") and the last ("Length") column
+#     :param df:
+#     :return:
+#     """
+#     df = df_f.copy()
+#     first_column = df.columns[0]
+#     run_columns = df.columns[1:-2]
+#     length_column = 'Length'
+#     total_spec_column = "Total Spectral Count"
+#
+#     # Create a new DataFrame to store NSAF results
+#     nsaf_df = pd.DataFrame(df[first_column])
+#
+#     # Calculate SAF for each protein
+#     df['SAF'] = df[total_spec_column] / df[length_column]
+#
+#     # Calculate the total SAF for the sample
+#     total_saf = df['SAF'].sum()
+#
+#     # Calculate NSAF for each protein
+#     df['NSAF'] = df['SAF'] / total_saf
+#
+#     # Multiply NSAF by the intensity for each run
+#     for run in run_columns:
+#         nsaf_intensity_column = f'{run}'
+#         df[nsaf_intensity_column] = df['NSAF'] * df[run]
+#         nsaf_df[nsaf_intensity_column] = df[nsaf_intensity_column]
+#
+#     return nsaf_df
 
 
 def nsaf_func(df_f):

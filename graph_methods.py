@@ -201,21 +201,21 @@ def ks_test_total(dmso, whel):
     return pd.DataFrame(ks_results)
 
 
-def plot_ks_result_histogram(df, ks_column='KS_Result'):
+def plot_ks_result_histogram(df, ks_column='P_Value'):
     """
     Plot the histogram of the ks-score for downstream analysis.
     """
-    df['KS_Result_First'] = df[ks_column].apply(lambda x: x[0])
+    df['P_Value_First'] = df[ks_column]
 
-    df_sorted = df.sort_values(by='KS_Result_First', ascending=False)
+    df_sorted = df.sort_values(by='P_Value_First', ascending=False)
 
-    unique_values = df['KS_Result_First'].unique()
+    unique_values = df['P_Value_First'].unique()
     num_bins = len(unique_values)
 
     plt.figure(figsize=(10, 6))
-    plt.hist(df['KS_Result_First'], bins=num_bins, edgecolor='black', color='orange')
+    plt.hist(df['P_Value_First'], bins=num_bins, edgecolor='black', color='orange')
     plt.title('Histogram of the KS Score')
-    plt.xlabel('KS Score')
+    plt.xlabel('P Value Score')
     plt.ylabel('Frequency')
     plt.grid(False)
     plt.show()
@@ -362,11 +362,11 @@ if __name__ == '__main__':
     tic_normalized_dmso = tic_normalization(dmso_shared)
     tic_normalized_whel = tic_normalization(whel_shared)
 
-    """
-    Median normalization
-    """
-    median_normalized_dmso = median_normalization(dmso_shared)
-    median_normalized_whel = median_normalization(whel_shared)
+    # """
+    # Median normalization
+    # """
+    # median_normalized_dmso = median_normalization(dmso_shared)
+    # median_normalized_whel = median_normalization(whel_shared)
 
     """
     Quantile normalization
@@ -387,21 +387,21 @@ if __name__ == '__main__':
     var_stab_normalized_whel = var_stab_normalization(whel_shared)
 
     # Plot normalizations
-    hkg = ["ACTB", "GAPDH", "TUBB",  "H3-3A"]
-    for i in hkg:
-        plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
-        plot_gene_intensity(tic_normalized_dmso, tic_normalized_whel, i, "TIC")
-        plot_gene_intensity(quantile_normalized_dmso, quantile_normalized_whel, i, "Quantile")
-        plot_gene_intensity(z_normalized_dmso, z_normalized_whel, i, "Z_norm")
-        plot_gene_intensity(var_stab_normalized_dmso, var_stab_normalized_whel, i, "Variance Stabalize")
+    # hkg = ["ACTB", "GAPDH", "TUBB",  "H3-3A"]
+    # for i in hkg:
+    #     plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
+    #     plot_gene_intensity(tic_normalized_dmso, tic_normalized_whel, i, "TIC")
+    #     plot_gene_intensity(quantile_normalized_dmso, quantile_normalized_whel, i, "Quantile")
+    #     plot_gene_intensity(z_normalized_dmso, z_normalized_whel, i, "Z_norm")
+    #     plot_gene_intensity(var_stab_normalized_dmso, var_stab_normalized_whel, i, "Variance Stabalize")
+    #
 
-
-    # ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
-    # ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
+    ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
+    ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
     # ks_median_df = ks_test_total(median_normalized_dmso, median_normalized_whel)
-    # ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
-    # ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
-    # ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
+    ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
+    ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
+    ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
     #
 
     #

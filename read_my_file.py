@@ -267,6 +267,7 @@ pattern = r'F\d+_\d+ Total Spectral Count'
 columns_to_subset = spec_count_df.filter(regex=pattern).columns
 columns_to_subset = ["Genes"] + ["Protein Length"]+ list(columns_to_subset)
 
+# Rename the columns
 sc_df_intermediate = spec_count_df[columns_to_subset]
 spec_df = rename_dataframe_columns(sc_df_intermediate)
 

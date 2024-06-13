@@ -16,7 +16,7 @@ PRC1 = df_unique[3]
 CCNB1 = df_unique[4]
 
 # Select the proteins based on the KS-SCORE
-KS_df = pd.read_excel("Sorted_KS-SCORE_with_threshold_0.1_DMSO_vs_whel.xlsx")
+# KS_df = pd.read_excel("Sorted_KS-SCORE_with_threshold_0.1_DMSO_vs_whel.xlsx")
 AURKA_df = dmso_shared[dmso_shared["Genes"].isin(AURKA)]
 AURKB_df = dmso_shared[dmso_shared["Genes"].isin(AURKB)]
 KIF11_df = dmso_shared[dmso_shared["Genes"].isin(KIF11)]

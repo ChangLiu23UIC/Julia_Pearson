@@ -353,7 +353,7 @@ if __name__ == '__main__':
     """ 
     # The NSFA normalization
     """
-    nsaf_together = nsaf_method(spec_df).dropna()
+    nsaf_together = nsaf_method(spec_df).dropna().drop_duplicates()
     nsaf_normalized_dmso, nsaf_normalized_whel = separate_dataframe(nsaf_together)
 
     """
@@ -402,9 +402,21 @@ if __name__ == '__main__':
     ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
     ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
     ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
-    #
 
-    #
+    # Get the top 5 percent of the p_value
+    top_nsaf = top_5_percent(ks_nsaf_df)
+    top_z = top_5_percent(ks_z_df)
+    top_quantile = top_5_percent(ks_quantile_df)
+    top_tic = top_5_percent(ks_tic_df)
+    top_var = top_5_percent(ks_var_df)
+
+    # Try to subset the cell cycle pathway proteins o the top 5 percent KS score of normalization
+    top_nsaf_df = top_nsaf[top_nsaf['Genes'].isin(union_set)]
+    top_z_df = top_z[top_z['Genes'].isin(union_set)]
+    top_quantile_df = top_quantile[top_quantile['Genes'].isin(union_set)]
+    top_tic_df = top_tic[top_tic['Genes'].isin(union_set)]
+    top_var_df = top_var[top_var['Genes'].isin(union_set)]
+
 
     # Log Transformed
     # log_dmso = log_df(dmso_shared)

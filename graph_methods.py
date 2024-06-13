@@ -353,47 +353,49 @@ if __name__ == '__main__':
     """ 
     # The NSFA normalization
     """
-    # Add the protein length for NSFA method
-    # nsaf_df_dmso = pd.merge(dmso_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
-    # nsaf_df_whel = pd.merge(whel_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
+    nsaf_together = nsaf_method(spec_df).dropna()
+    nsaf_normalized_dmso, nsaf_normalized_whel = separate_dataframe(nsaf_together)
 
-    # nsaf_normalized_dmso = nsaf_normalization(nsaf_df_dmso)
-    # nsaf_normalized_whel = nsaf_normalization(nsaf_df_whel)
+    """
+    The TIC normalization
+    """
+    tic_normalized_dmso = tic_normalization(dmso_shared)
+    tic_normalized_whel = tic_normalization(whel_shared)
 
-    # """
-    # The TIC normalization
-    # """
-    # tic_normalized_dmso = tic_normalization(dmso_shared)
-    # tic_normalized_whel = tic_normalization(whel_shared)
-    #
-    # """
-    # Median normalization
-    # """
-    # median_normalized_dmso = median_normalization(dmso_shared)
-    # median_normalized_whel = median_normalization(whel_shared)
-    #
-    # """
-    # Quantile normalization
-    # """
-    # quantile_normalized_dmso = quantile_normalization(dmso_shared)
-    # quantile_normalized_whel = quantile_normalization(whel_shared)
-    #
-    # """
-    # Z-score normalization
-    # """
-    # z_normalized_dmso = z_normalization(dmso_shared)
-    # z_normalized_whel = z_normalization(whel_shared)
-    #
-    # """
-    # Variance Stabalize normalization
-    # """
-    # var_stab_normalized_dmso = var_stab_normalization(dmso_shared)
-    # var_stab_normalized_whel = var_stab_normalization(whel_shared)
-    #
-    # # Plot normalizations
-    # # for i in union_set:
-    # #     plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
-    #
+    """
+    Median normalization
+    """
+    median_normalized_dmso = median_normalization(dmso_shared)
+    median_normalized_whel = median_normalization(whel_shared)
+
+    """
+    Quantile normalization
+    """
+    quantile_normalized_dmso = quantile_normalization(dmso_shared)
+    quantile_normalized_whel = quantile_normalization(whel_shared)
+
+    """
+    Z-score normalization
+    """
+    z_normalized_dmso = z_normalization(dmso_shared)
+    z_normalized_whel = z_normalization(whel_shared)
+
+    """
+    Variance Stabalize normalization
+    """
+    var_stab_normalized_dmso = var_stab_normalization(dmso_shared)
+    var_stab_normalized_whel = var_stab_normalization(whel_shared)
+
+    # Plot normalizations
+    hkg = ["ACTB", "GAPDH", "TUBB",  "H3-3A"]
+    for i in hkg:
+        plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
+        plot_gene_intensity(tic_normalized_dmso, tic_normalized_whel, i, "TIC")
+        plot_gene_intensity(quantile_normalized_dmso, quantile_normalized_whel, i, "Quantile")
+        plot_gene_intensity(z_normalized_dmso, z_normalized_whel, i, "Z_norm")
+        plot_gene_intensity(var_stab_normalized_dmso, var_stab_normalized_whel, i, "Variance Stabalize")
+
+
     # ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
     # ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
     # ks_median_df = ks_test_total(median_normalized_dmso, median_normalized_whel)

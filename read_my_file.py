@@ -230,8 +230,6 @@ def map_column_name(column_name):
     prefix = parts[0]
     spec_type = ' '.join(parts[1:])
 
-    print(prefix)
-
     if '_' not in prefix or len(prefix.split('_')) != 2:
         return column_name
 
@@ -267,7 +265,7 @@ filled_whel = fill_na_with_half_min(df_whel).dropna()
 spec_count_df = pd.read_csv("1-6_protein.tsv", delimiter= "\t")
 pattern = r'F\d+_\d+ Total Spectral Count'
 columns_to_subset = spec_count_df.filter(regex=pattern).columns
-columns_to_subset = ["Gene"] + ["Protein Length"]+ list(columns_to_subset)
+columns_to_subset = ["Genes"] + ["Protein Length"]+ list(columns_to_subset)
 
 sc_df_intermediate = spec_count_df[columns_to_subset]
 spec_df = rename_dataframe_columns(sc_df_intermediate)

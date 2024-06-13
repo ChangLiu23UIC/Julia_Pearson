@@ -22,6 +22,23 @@ def z_normalization(df):
     return df_normalized
 
 
+def nsaf_method(df):
+    exclude_columns = ['Genes', 'Protein Length']
+    columns_to_divide = [col for col in df.columns if col not in exclude_columns]
+
+    # Perform the division
+    for col in columns_to_divide:
+        df[col] = df[col] / df['Protein Length']
+
+    sum_safs = df[columns_to_divide].sum()
+
+    # Calculate NSAF for each column
+    for col in columns_to_divide:
+        df[col] = df[col] / sum_safs[col]
+
+    return df
+
+
 def nsaf_normalization(df_f):
     """
     Perform NSAF normalization to the given df for all columns despite the first ("Genes") and the last ("Length") column

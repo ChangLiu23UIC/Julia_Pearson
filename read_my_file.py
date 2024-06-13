@@ -221,12 +221,49 @@ def fill_na_with_half_min(df):
     return df_filled
 
 
+def map_column_name(column_name):
+    parts = column_name.split()
+    # Return as is if the column name doesn't follow the expected pattern
+    if len(parts) < 2:
+        return column_name
+
+    prefix = parts[0]
+    spec_type = ' '.join(parts[1:])
+
+    # Extract F, replicate number, and replicate set
+    f, replicate_set, replicate_num = prefix.split('_')
+
+    # Determine the new prefix
+    if int(replicate_num) <= 3:
+        new_prefix = f"DMSO-n{replicate_num}-{f}"
+    else:
+        new_prefix = f"whel-n{int(replicate_num) - 3}-{f}"
+
+    return f"{new_prefix} {spec_type}"
+
+
+def rename_dataframe_columns(df):
+    # Create a new column mapping based on the provided logic
+    new_column_names = {col: map_column_name(col) for col in df.columns}
+    df.rename(columns=new_column_names, inplace=True)
+
+    return df
+
+
 # Read all the files needed
 ccp = pd.read_excel("ccp.xlsx", "Atlas")
 df_new = pd.read_csv("new_dataset.csv")
 df_dmso, df_whel = separate_dataframe(df_new)
 filled_dmso = fill_na_with_half_min(df_dmso).dropna()
 filled_whel = fill_na_with_half_min(df_whel).dropna()
+
+spec_count_df = pd.read_csv("1-6_protein.tsv", delimiter= "\t")
+pattern = r'F\d+_\d+ Total Spectral Count'
+columns_to_subset = spec_count_df.filter(regex=pattern).columns
+columns_to_subset = ["Gene"] + ["Protein Length"]+ list(columns_to_subset)
+
+sc_df_intermediate = spec_count_df[columns_to_subset]
+spec_df = rename_dataframe_columns(sc_df_intermediate)
 
 # Get all the genes for each run and Union them
 dmso_gene = set(filled_dmso["Genes"])

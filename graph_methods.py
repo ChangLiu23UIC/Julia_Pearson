@@ -201,7 +201,7 @@ def ks_test_total(dmso, whel):
     return pd.DataFrame(ks_results)
 
 
-def plot_ks_result_histogram(df, ks_column='P_Value'):
+def plot_ks_result_histogram(df, method, ks_column='P_Value'):
     """
     Plot the histogram of the ks-score for downstream analysis.
     """
@@ -214,11 +214,12 @@ def plot_ks_result_histogram(df, ks_column='P_Value'):
 
     plt.figure(figsize=(10, 6))
     plt.hist(df['P_Value_First'], bins=num_bins, edgecolor='black', color='orange')
-    plt.title('Histogram of the KS Score')
+    plt.title(f'Histogram of the KS test p-values with {method} normalization')
     plt.xlabel('P Value Score')
     plt.ylabel('Frequency')
     plt.grid(False)
-    plt.show()
+    plt.savefig(f"hist img/Histogram of the KS test p-values with {method} normalization.png")
+    plt.close()
 
     return df_sorted
 

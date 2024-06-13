@@ -263,12 +263,13 @@ filled_dmso = fill_na_with_half_min(df_dmso).dropna()
 filled_whel = fill_na_with_half_min(df_whel).dropna()
 
 spec_count_df = pd.read_csv("1-6_protein.tsv", delimiter= "\t")
+spec_count_df_filtered = spec_count_df[~spec_count_df['Protein'].str.startswith('tr|') & ~spec_count_df['Protein'].str.contains('contam')]
 pattern = r'F\d+_\d+ Total Spectral Count'
-columns_to_subset = spec_count_df.filter(regex=pattern).columns
+columns_to_subset = spec_count_df_filtered.filter(regex=pattern).columns
 columns_to_subset = ["Genes"] + ["Protein Length"]+ list(columns_to_subset)
 
 # Rename the columns
-sc_df_intermediate = spec_count_df[columns_to_subset]
+sc_df_intermediate = spec_count_df_filtered[columns_to_subset]
 spec_df = rename_dataframe_columns(sc_df_intermediate)
 
 # Get all the genes for each run and Union them

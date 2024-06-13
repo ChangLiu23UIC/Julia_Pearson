@@ -1,6 +1,7 @@
 import seaborn as sns
 from sklearn.preprocessing import QuantileTransformer
 import pandas as pd
+import numpy as np
 
 
 def z_normalization(df):
@@ -21,22 +22,61 @@ def z_normalization(df):
     return df_normalized
 
 
-def nsaf_normalization(df):
+def nsaf_normalization(df_f):
     """
     Perform NSAF normalization to the given df for all columns despite the first ("Genes") and the last ("Length") column
     :param df:
     :return:
     """
+    df = df_f.copy()
     first_column = df.columns[0]
-    run_columns = df.columns[1:-1]
-    length_column = df.columns[-1]
+    run_columns = df.columns[1:-2]
+    length_column = 'Length'
+    total_spec_column = "Total Spectral Count"
+
+    # Create a new DataFrame to store NSAF results
     nsaf_df = pd.DataFrame(df[first_column])
 
-    # NSAF for each column.
+    # Calculate SAF for each protein
+    df['SAF'] = df[total_spec_column] / df[length_column]
+
+    # Calculate the total SAF for the sample
+    total_saf = df['SAF'].sum()
+
+    # Calculate NSAF for each protein
+    df['NSAF'] = df['SAF'] / total_saf
+
+    # Multiply NSAF by the intensity for each run
     for run in run_columns:
-        df[f'SAF_{run}'] = df[run] / df[length_column]
-        total_saf = df[f'SAF_{run}'].sum()
-        nsaf_df[f'{run}'] = df[f'SAF_{run}'] / total_saf
+        nsaf_intensity_column = f'{run}'
+        df[nsaf_intensity_column] = df['NSAF'] * df[run]
+        nsaf_df[nsaf_intensity_column] = df[nsaf_intensity_column]
+
+    return nsaf_df
+
+
+def nsaf_func(df_f):
+    df = df_f.copy()
+    first_column = df.columns[0]
+    run_columns = df.columns[1:-2]
+    length_column = 'Length'
+    total_spec_column = "Razor Spectral Count"
+
+    # Create a new DataFrame to store NSAF results
+    nsaf_df = pd.DataFrame(df[first_column])
+
+    # Calculate SAF for each protein
+    df['SAF'] = df[total_spec_column] / df[length_column]
+
+    # Calculate the total SAF for the sample
+    total_saf = df['SAF'].sum()
+
+    # Calculate NSAF for each protein
+    df['NSAF'] = df['SAF'] / total_saf
+
+    nsaf_df["NSAF"] = df["NSAF"]
+    nsaf_df["Razor Spectral Count"] = df[total_spec_column]
+
 
     return nsaf_df
 
@@ -93,6 +133,29 @@ def quantile_normalization(df):
     df_normalized.iloc[:, 0] = genes_column
 
     return df_normalized
+
+
+def var_stab_normalization(df):
+    """
+    Perform Variance Stabilization Normalization (VSN) on the given DataFrame.
+    """
+    # Extract the columns to normalize (the first column is 'Genes')
+    genes_column = df.iloc[:, 0]
+    intensity_columns = df.columns[1:]
+
+    # Apply log transformation to stabilize variance
+    df_log_transformed = np.log2(df[intensity_columns] + 1)
+
+    # Scale data to have mean 0 and standard deviation 1
+    df_mean = df_log_transformed.mean()
+    df_std = df_log_transformed.std()
+    df_vsn_normalized = (df_log_transformed - df_mean) / df_std
+
+    # Reattach the genes column
+    df_vsn_normalized.insert(0, df.columns[0], genes_column)
+
+    return df_vsn_normalized
+
 
 if __name__ == '__main__':
     print("Hello")

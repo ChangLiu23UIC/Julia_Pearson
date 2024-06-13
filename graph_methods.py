@@ -1,12 +1,8 @@
-import pandas as pd
-
 from read_my_file import *
 import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
 import numpy as np
-from sklearn.preprocessing import QuantileTransformer
 from pathway_construction import *
-import seaborn as sns
 from Normalization_methods import *
 
 # def whel_dmso_subset(df):
@@ -28,25 +24,25 @@ from Normalization_methods import *
 #     return whel_runs, dmso_runs
 
 
-def subset_by_run(df):
-    """
-    Subset my dataframe by run. This looks at the run number and subset each of them into runs.
-    :param df:
-    :return:
-    """
-    genes_column = df[['Genes']]
-
-    x_values = set(col.split('-')[1][1:] for col in df.columns if '-' in col and col != 'Genes')
-
-    subsets = {}
-
-    for x in x_values:
-        # Since there are two types of runs. We need r and n individually.
-        columns_with_x = [col for col in df.columns if f'-r{x}-' in col or f'-n{x}-' in col]
-        columns_with_x_sorted = sorted(columns_with_x, key=lambda col: int(col.split('-F')[-1]))
-        subset = pd.concat([genes_column, df[columns_with_x_sorted]], axis=1)
-        subsets[x] = subset
-    return subsets
+# def subset_by_run(df):
+#     """
+#     Subset my dataframe by run. This looks at the run number and subset each of them into runs.
+#     :param df:
+#     :return:
+#     """
+#     genes_column = df[['Genes']]
+#
+#     x_values = set(col.split('-')[1][1:] for col in df.columns if '-' in col and col != 'Genes')
+#
+#     subsets = {}
+#
+#     for x in x_values:
+#         # Since there are two types of runs. We need r and n individually.
+#         columns_with_x = [col for col in df.columns if f'-r{x}-' in col or f'-n{x}-' in col]
+#         columns_with_x_sorted = sorted(columns_with_x, key=lambda col: int(col.split('-F')[-1]))
+#         subset = pd.concat([genes_column, df[columns_with_x_sorted]], axis=1)
+#         subsets[x] = subset
+#     return subsets
 
 # def graphing_methods(dataframe, gene_name,treatment_type, n = None):
 #     """
@@ -74,26 +70,6 @@ def subset_by_run(df):
 #     plt.title(f'Protein Level for {gene_name} under {treatment_type} treatment run {n} ')
 #     plt.grid(False)
 #     plt.show()
-
-
-def separate_dataframe(df):
-    """
-    THis will seperate the dataframe into two dataframes.
-    :param df:
-    :return:
-    """
-    genes_col = df['Genes']
-
-    dmso_cols = [col for col in df.columns if col.startswith('DMSO-')]
-    whel_cols = [col for col in df.columns if col.startswith('whel-')]
-
-    df_dmso = pd.DataFrame({'Genes': genes_col})
-    df_dmso = pd.concat([df_dmso, df[dmso_cols]], axis=1)
-
-    df_whel = pd.DataFrame({'Genes': genes_col})
-    df_whel = pd.concat([df_whel, df[whel_cols]], axis=1)
-
-    return df_dmso, df_whel
 
 
 def average_graph(dmso_df, whel_df, protein):
@@ -128,21 +104,6 @@ def average_graph(dmso_df, whel_df, protein):
     plt.grid(False)
     plt.savefig(f'img/Average of Log Transformed Intensity for {protein} .png')
     plt.close()
-
-
-def fill_na_with_half_min(df):
-    """
-    Since we have some of the empty cells. We fill them with half of the minimum in the row.
-    :param df:
-    :return:
-    """
-    categorical_col = df.iloc[:, 0]
-    numeric_df = df.iloc[:, 1:]
-
-    filled_numeric_df = numeric_df.apply(lambda row: row.fillna(row.min(skipna=True)/2), axis=1)
-    df_filled = pd.concat([categorical_col, filled_numeric_df], axis=1)
-
-    return df_filled
 
 
 def average_dataframe(df):
@@ -183,52 +144,60 @@ def log_df(df, string_col_name='Genes'):
     return log_transformed_df
 
 
-def ks_test_between_runs(log_dmso, log_whel):
+def ks_test_between_runs(dmso, whel):
     """
     Test the KS score between every runs for DMSO and WHel in a combination. Ex: DMSO run1 vs Whel run1, whelrun2, whelrun3.
-    :param log_dmso:
-    :param log_whel:
+    :param dmso:
+    :param whel:
     :return:
     """
-    genes = log_dmso.index
-    dmso_runs = sorted(set(col.split('-')[0] + '-' + col.split('-')[1] for col in log_dmso.columns))
-    whel_runs = sorted(set(col.split('-')[0] + '-' + col.split('-')[1] for col in log_whel.columns))
+    genes = dmso["Genes"]
+    dmso = dmso.set_index("Genes")
+    whel = whel.set_index("Genes")
 
-    results = {'Genes': genes}
+    dmso_runs = sorted(set(col.split('-')[0] + '-' + col.split('-')[1] for col in dmso.columns))
+    whel_runs = sorted(set(col.split('-')[0] + '-' + col.split('-')[1] for col in whel.columns))
 
-    for whel_run in whel_runs:
-        for dmso_run in dmso_runs:
-            column_name = f"{whel_run}_{dmso_run}"
-            ks_results = []
+    results = []
+
+    for dmso_run in dmso_runs:
+        for whel_run in whel_runs:
             for gene in genes:
-                whel_data = log_whel.loc[gene, [col for col in log_whel.columns if whel_run in col]].values
-                dmso_data = log_dmso.loc[gene, [col for col in log_dmso.columns if dmso_run in col]].values
-                ks_result = ks_2samp(whel_data, dmso_data)
-                ks_results.append([ks_result.statistic, ks_result.pvalue])
-            results[column_name] = ks_results
+                dmso_data = dmso.loc[gene, [col for col in dmso.columns if dmso_run in col]].values
+                whel_data = whel.loc[gene, [col for col in whel.columns if whel_run in col]].values
+                ks_result = ks_2samp(dmso_data, whel_data)
+                results.append({
+                    'Gene': gene,
+                    'Comparison': f"{dmso_run} vs {whel_run}",
+                    'KS_statistic': ks_result.statistic,
+                    'p_value': ks_result.pvalue
+                })
 
     return pd.DataFrame(results)
 
 
-def ks_test_total(log_dmso, log_whel):
+def ks_test_total(dmso, whel):
     """
     THe total score of the ks-test into a dataframe between two runs for all genes. THis is for the average scores.
-    :param log_dmso:
-    :param log_whel:
+    :param dmso:
+    :param whel:
     :return:
     """
 
-    genes = log_dmso.index
+    genes = dmso["Genes"]
     ks_results = {'Genes': genes}
-    results = []
+    results_statistic = []
+    results_pvalue = []
 
     for gene in genes:
-        dmso_data = log_dmso.loc[gene].values
-        whel_data = log_whel.loc[gene].values
+        dmso_data = dmso[dmso["Genes"] == gene].drop(columns=["Genes"]).values.flatten()
+        whel_data = whel[whel["Genes"] == gene].drop(columns=["Genes"]).values.flatten()
         ks_result = ks_2samp(dmso_data, whel_data)
-        results.append([ks_result.statistic, ks_result.pvalue])
+        results_statistic.append(ks_result.statistic)
+        results_pvalue.append(ks_result.pvalue)
 
-    ks_results['KS_Result'] = results
+    ks_results['KS_Statistic'] = results_statistic
+    ks_results['P_Value'] = results_pvalue
     return pd.DataFrame(ks_results)
 
 
@@ -289,7 +258,7 @@ def plot_ks(df1, df2, gene):
 
 def plot_hist(df, gene):
     """
-    plot th ehistogram of the data
+    plot the histogram of the data
     :param df:
     :param gene:
     :return:
@@ -305,8 +274,6 @@ def plot_hist(df, gene):
 
     plt.savefig(f"Histogram for whel {gene}.jpg")
     plt.close()
-
-
 
 
 def plot_gene_intensity(DMSO_df, whel_df, gene_name, normalize_mehod):
@@ -381,72 +348,59 @@ def one_to_five_and_to_nine_average(df):
 
 
 if __name__ == '__main__':
+    print("Hello")
 
     """ 
     # The NSFA normalization
     """
     # Add the protein length for NSFA method
-    nsfa_df_dmso = pd.merge(dmso_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
-    nsfa_df_whel = pd.merge(whel_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
+    # nsaf_df_dmso = pd.merge(dmso_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
+    # nsaf_df_whel = pd.merge(whel_shared, union_protein_length, on = "Genes", how = "left").drop_duplicates(subset=['Genes'])
 
-    nsaf_normalized_dmso = nsaf_normalization(nsfa_df_dmso)
-    nsaf_normalized_whel = nsaf_normalization(nsfa_df_whel)
+    # nsaf_normalized_dmso = nsaf_normalization(nsaf_df_dmso)
+    # nsaf_normalized_whel = nsaf_normalization(nsaf_df_whel)
 
-    """
-    The TIC normalization
-    """
-    tic_normalized_dmso = tic_normalization(dmso_shared)
-    tic_normalized_whel = tic_normalization(whel_shared)
-
-    """
-    Median normalization
-    """
-    median_normalized_dmso = median_normalization(dmso_shared)
-    median_normalized_whel = median_normalization(whel_shared)
-
-    """
-    Quantile normalization
-    """
-    quantile_normalized_dmso = quantile_normalization(dmso_shared)
-    quantile_normalized_whel = quantile_normalization(whel_shared)
-
-    """
-    Z-score normalization
-    """
-    z_normalized_dmso = z_normalization(dmso_shared)
-    z_normalized_whel = z_normalization(whel_shared)
-
-    # Plot nsaf normalizations
-    for i in union_set:
-        plot_gene_intensity(z_normalized_dmso, z_normalized_dmso, i, "Z-Score")
-
-
-    """
-    This part is the Z-Norm normalization
-    
-    # # Z-Norm Normalization
-    # dmso_norm = z_norm_df(dmso_shared)
-    # whel_norm = z_norm_df(whel_shared)
-    # 
-    # # Average the normalized runs
-    # avg_norm_dmso = average_dataframe(dmso_norm)
-    # avg_norm_whel = average_dataframe(whel_norm)
-    # 
-    # plot_gene_intensity(dmso_norm, whel_norm, "AURKA")
-    # plot_gene_intensity(dmso_norm, whel_norm, "AURKB")
-    # plot_gene_intensity(dmso_norm, whel_norm, "PRC1")
-    # plot_gene_intensity(dmso_norm, whel_norm, "KIF11")
-    # plot_gene_intensity(dmso_norm, whel_norm, "CCNB1")
-    # plot_gene_intensity(dmso_norm, whel_norm, "TACC3")
-    # 
-    # average_graph(avg_norm_dmso, avg_norm_whel, "AURKA")
-    # average_graph(avg_norm_dmso, avg_norm_whel, "AURKB")
-    # average_graph(avg_norm_dmso, avg_norm_whel, "PRC1")
-    # average_graph(avg_norm_dmso, avg_norm_whel, "KIF11")
-    # average_graph(avg_norm_dmso, avg_norm_whel, "CCNB1")
-    # average_graph(avg_norm_dmso, avg_norm_whel, "TACC3")
-    """
-
+    # """
+    # The TIC normalization
+    # """
+    # tic_normalized_dmso = tic_normalization(dmso_shared)
+    # tic_normalized_whel = tic_normalization(whel_shared)
+    #
+    # """
+    # Median normalization
+    # """
+    # median_normalized_dmso = median_normalization(dmso_shared)
+    # median_normalized_whel = median_normalization(whel_shared)
+    #
+    # """
+    # Quantile normalization
+    # """
+    # quantile_normalized_dmso = quantile_normalization(dmso_shared)
+    # quantile_normalized_whel = quantile_normalization(whel_shared)
+    #
+    # """
+    # Z-score normalization
+    # """
+    # z_normalized_dmso = z_normalization(dmso_shared)
+    # z_normalized_whel = z_normalization(whel_shared)
+    #
+    # """
+    # Variance Stabalize normalization
+    # """
+    # var_stab_normalized_dmso = var_stab_normalization(dmso_shared)
+    # var_stab_normalized_whel = var_stab_normalization(whel_shared)
+    #
+    # # Plot normalizations
+    # # for i in union_set:
+    # #     plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
+    #
+    # ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
+    # ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
+    # ks_median_df = ks_test_total(median_normalized_dmso, median_normalized_whel)
+    # ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
+    # ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
+    # ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
+    #
 
     #
 
@@ -464,7 +418,6 @@ if __name__ == '__main__':
     #
     # # join_df = pd.merge(sorted_df, ccp, on ="Genes", how = "inner")
     #
-    # # result_df = ks_test_between_runs(subset_dmso, subset_whel)
     #
     # avg_dmso = average_dataframe(dmso_shared)
     # avg_whel = average_dataframe(whel_shared)

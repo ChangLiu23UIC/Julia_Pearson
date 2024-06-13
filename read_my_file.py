@@ -1,6 +1,5 @@
 import pandas as pd
 from itertools import combinations
-from graph_methods import *
 
 def extract_name(column_path):
     """
@@ -186,14 +185,44 @@ def transform_correlation_dict(corr_dict):
     #  Still need manual adjustments.
     return final_df
 
+
+def separate_dataframe(df):
+    """
+    THis will seperate the dataframe into two dataframes.
+    :param df:
+    :return:
+    """
+    genes_col = df['Genes']
+
+    dmso_cols = [col for col in df.columns if col.startswith('DMSO-')]
+    whel_cols = [col for col in df.columns if col.startswith('whel-')]
+
+    df_dmso = pd.DataFrame({'Genes': genes_col})
+    df_dmso = pd.concat([df_dmso, df[dmso_cols]], axis=1)
+
+    df_whel = pd.DataFrame({'Genes': genes_col})
+    df_whel = pd.concat([df_whel, df[whel_cols]], axis=1)
+
+    return df_dmso, df_whel
+
+
+def fill_na_with_half_min(df):
+    """
+    Since we have some of the empty cells. We fill them with half of the minimum in the row.
+    :param df:
+    :return:
+    """
+    categorical_col = df.iloc[:, 0]
+    numeric_df = df.iloc[:, 1:]
+
+    filled_numeric_df = numeric_df.apply(lambda row: row.fillna(row.min(skipna=True)/2), axis=1)
+    df_filled = pd.concat([categorical_col, filled_numeric_df], axis=1)
+
+    return df_filled
+
+
 # Read all the files needed
 ccp = pd.read_excel("ccp.xlsx", "Atlas")
-protein_length = pd.read_csv("protein.tsv", delimiter= "\t")
-protein_length_2 = pd.read_csv("protein_rerun.tsv", delimiter="\t")
-protein_length_df = protein_length[["Genes","Length"]]
-protein_length_df_2 = protein_length_2[["Genes","Length"]]
-union_protein_length = pd.concat([protein_length_df, protein_length_df_2])
-
 df_new = pd.read_csv("new_dataset.csv")
 df_dmso, df_whel = separate_dataframe(df_new)
 filled_dmso = fill_na_with_half_min(df_dmso).dropna()

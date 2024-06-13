@@ -1,7 +1,4 @@
-import pandas as pd
-from graph_methods import *
 from read_my_file import *
-
 def union_lists_to_set(*lists):
     union_set = set()
     for lst in lists:

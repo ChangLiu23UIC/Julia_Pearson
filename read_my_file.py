@@ -230,24 +230,31 @@ def map_column_name(column_name):
     prefix = parts[0]
     spec_type = ' '.join(parts[1:])
 
+    print(prefix)
+
+    if '_' not in prefix or len(prefix.split('_')) != 2:
+        return column_name
+
     # Extract F, replicate number, and replicate set
-    f, replicate_set, replicate_num = prefix.split('_')
+    f, replicate_info = prefix.split('_')
 
     # Determine the new prefix
-    if int(replicate_num) <= 3:
-        new_prefix = f"DMSO-n{replicate_num}-{f}"
+    if int(replicate_info) <= 3:
+        new_prefix = f"DMSO-n{replicate_info}-{f}"
     else:
-        new_prefix = f"whel-n{int(replicate_num) - 3}-{f}"
+        new_prefix = f"whel-n{int(replicate_info) - 3}-{f}"
 
-    return f"{new_prefix} {spec_type}"
+
+    return f"{new_prefix}"
 
 
 def rename_dataframe_columns(df):
-    # Create a new column mapping based on the provided logic
     new_column_names = {col: map_column_name(col) for col in df.columns}
-    df.rename(columns=new_column_names, inplace=True)
+    # Create a copy of the DataFrame and rename the columns
+    df_copy = df.copy()
+    df_copy.rename(columns=new_column_names, inplace=True)
 
-    return df
+    return df_copy
 
 
 # Read all the files needed

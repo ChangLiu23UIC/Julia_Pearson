@@ -221,6 +221,21 @@ def fill_na_with_half_min(df):
     return df_filled
 
 
+def fill_na_with_zero(df):
+    """
+    Since we have some of the empty cells. We fill them with half of the minimum in the row.
+    :param df:
+    :return:
+    """
+    categorical_col = df.iloc[:, 0]
+    numeric_df = df.iloc[:, 1:]
+
+    filled_numeric_df = numeric_df.apply(lambda row: row.fillna(0), axis=1)
+    df_filled = pd.concat([categorical_col, filled_numeric_df], axis=1)
+
+    return df_filled
+
+
 def map_column_name(column_name):
     parts = column_name.split()
     # Return as is if the column name doesn't follow the expected pattern
@@ -236,11 +251,12 @@ def map_column_name(column_name):
     # Extract F, replicate number, and replicate set
     f, replicate_info = prefix.split('_')
 
+
     # Determine the new prefix
-    if int(replicate_info) <= 3:
-        new_prefix = f"DMSO-n{replicate_info}-{f}"
+    if int(replicate_info) % 10 == 0:
+        new_prefix = f"DMSO-n{int(replicate_info)//10}-{f}"
     else:
-        new_prefix = f"whel-n{int(replicate_info) - 3}-{f}"
+        new_prefix = f"whel-n{int(replicate_info)//10}-{f}"
 
 
     return f"{new_prefix}"
@@ -257,15 +273,22 @@ def rename_dataframe_columns(df):
 
 # Read all the files needed
 ccp = pd.read_excel("ccp.xlsx", "Atlas")
-df_new = pd.read_csv("new_dataset.csv")
-df_dmso, df_whel = separate_dataframe(df_new)
+df_new = pd.read_csv("1-6_MBR.tsv", delimiter= "\t")
+df_new_filtered = df_new[~df_new['Protein'].str.startswith('tr|') & ~df_new['Protein'].str.contains('contam')]
+intensity_pattern = r'F\d+_\d+ Intensity'
+columns_to_subset_intensity = df_new_filtered.filter(regex=intensity_pattern).columns
+columns_to_subset_intensity = ["Genes"] + list(columns_to_subset_intensity)
+df_intensity_intermediate = df_new_filtered[columns_to_subset_intensity]
+intensity_df = rename_dataframe_columns(df_intensity_intermediate)
+
+df_dmso, df_whel = separate_dataframe(intensity_df)
 filled_dmso = fill_na_with_half_min(df_dmso).dropna()
 filled_whel = fill_na_with_half_min(df_whel).dropna()
 
-spec_count_df = pd.read_csv("1-6_protein.tsv", delimiter= "\t")
+spec_count_df = pd.read_csv("1-6_MBR.tsv", delimiter= "\t")
 spec_count_df_filtered = spec_count_df[~spec_count_df['Protein'].str.startswith('tr|') & ~spec_count_df['Protein'].str.contains('contam')]
-pattern = r'F\d+_\d+ Total Spectral Count'
-columns_to_subset = spec_count_df_filtered.filter(regex=pattern).columns
+spec_pattern = r'F\d+_\d+ Total Spectral Count'
+columns_to_subset = spec_count_df_filtered.filter(regex=spec_pattern).columns
 columns_to_subset = ["Genes"] + ["Protein Length"]+ list(columns_to_subset)
 
 # Rename the columns
@@ -294,13 +317,14 @@ if __name__ == '__main__':
     #
     # # merged_df.to_excel("Manual_result.xlsx", index = False)
     # fin_pearson.sort_index().to_excel("Pearson_result.xlsx", index = False)
-
-    # # REAL WORK
-    # experiment = pd.read_excel("With_R2.xlsx")
-    # experiment_columns = column_group(experiment)
     #
-    # experiment_pearson = dataframe_work(experiment, experiment_columns)
-    # experiment_spearman = dataframe_work_spearman(experiment, experiment_columns)
+    # # # REAL WORK
+    # experiment = pd.read_excel("New_pearson.xlsx")
+    # experiment_filled = experiment
+    # experiment_columns = column_group(experiment_filled)
+    # #
+    # experiment_pearson = dataframe_work(experiment_filled, experiment_columns)
+    # experiment_spearman = dataframe_work_spearman(experiment_filled, experiment_columns)
     #
     # final_result_pearson = transform_correlation_dict(experiment_pearson)
     # final_result_spearman = transform_correlation_dict(experiment_spearman)

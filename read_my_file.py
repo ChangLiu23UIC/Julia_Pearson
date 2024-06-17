@@ -320,11 +320,10 @@ if __name__ == '__main__':
     #
     # # # REAL WORK
     # experiment = pd.read_excel("New_pearson.xlsx")
-    # experiment_filled = experiment
-    # experiment_columns = column_group(experiment_filled)
-    # #
-    # experiment_pearson = dataframe_work(experiment_filled, experiment_columns)
-    # experiment_spearman = dataframe_work_spearman(experiment_filled, experiment_columns)
+    experiment_columns = column_group(intensity_df)
+    #
+    experiment_pearson = dataframe_work(intensity_df, experiment_columns)
+    # experiment_spearman = dataframe_work_spearman(intensity_df, experiment_columns)
     #
     # final_result_pearson = transform_correlation_dict(experiment_pearson)
     # final_result_spearman = transform_correlation_dict(experiment_spearman)

@@ -351,28 +351,71 @@ def plot_diff(DMSO_df, whel_df, gene_name, normalize_method):
     combined_df['Run'] = pd.to_numeric(combined_df['Run'])
     combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
 
-    # Calculate the sum of intensity for each fraction
-    sum_df = combined_df.groupby(['Treatment', 'Fraction'])['Intensity'].sum().reset_index()
+    # Calculate the mean of intensity for each fraction
+    sum_df = combined_df.groupby(['Treatment', 'Fraction'])['Intensity'].mean().reset_index()
+
 
     # Pivot the DataFrame to have DMSO and whel in separate columns
     pivot_df = sum_df.pivot(index='Fraction', columns='Treatment', values='Intensity').reset_index()
 
+
     # Calculate the difference between DMSO and whel
     pivot_df['Difference'] = pivot_df.apply(
-        lambda row: ((row['DMSO'] - row['whel']) / (row['DMSO'] + row["whel"]) * 100) if (row['DMSO'] + row["whel"]) != 0 else 0, axis=1
+        lambda row: ((abs(row['DMSO']) - abs(row['whel'])) / (abs(row['DMSO']) + abs(row["whel"]))) * 100 if  (abs(row['DMSO']) + abs(row["whel"])) != 0 else 0, axis=1
     )
 
-
     sns.lineplot(data=pivot_df, x='Fraction', y='Difference', marker='o')
+    x_labels = [f"F{i}" for i in range(1,10)]
+    plt.xticks(ticks=range(1, 10), labels=x_labels)
     plt.xlabel('Fraction')
-    plt.ylabel(f'{normalize_method} normalized Intensity Difference')
+    plt.ylabel(f'{normalize_method} normalized Intensity Difference %')
     plt.title(f'{normalize_method} normalized Intensity Difference for {gene_name}')
     plt.grid(True)
 
     plt.ylim(-100,100)
 
     # Save the plot
-    plt.savefig(f"{normalize_method} normalized Intensity for {gene_name} for each DMSO and Whel run.png")
+    plt.savefig(f"diff img/{normalize_method} normalized Intensity difference for {gene_name} for each DMSO and Whel run.png")
+    plt.close()
+
+
+
+def plot_fraction_boxplots(DMSO_df, whel_df, normalize_method):
+    """
+    Plot box plots of intensities for each fraction.
+
+    :param DMSO_df: DataFrame containing DMSO data
+    :param whel_df: DataFrame containing whel data
+    :param normalize_method: The normalization method used
+    :return: None
+    """
+    # Reshape the DataFrames to long format
+    DMSO_long = pd.melt(DMSO_df, id_vars=['Genes'], var_name='Fraction', value_name='Intensity')
+    whel_long = pd.melt(whel_df, id_vars=['Genes'], var_name='Fraction', value_name='Intensity')
+
+    # Extract run and fraction information
+    DMSO_long[['Treatment', 'Run', 'Fraction']] = DMSO_long['Fraction'].str.extract(r'(DMSO)-n(\d+)-F(\d+)')
+    whel_long[['Treatment', 'Run', 'Fraction']] = whel_long['Fraction'].str.extract(r'(whel)-n(\d+)-F(\d+)')
+
+    # Combine the two DataFrames
+    combined_df = pd.concat([DMSO_long, whel_long])
+
+    # Convert relevant columns to numeric
+    combined_df['Run'] = pd.to_numeric(combined_df['Run'])
+    combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
+
+    # Plot the box plots for each fraction
+    plt.figure(figsize=(15, 10))
+    sns.boxplot(data=combined_df, x='Fraction', y='Intensity', hue='Treatment')
+
+    plt.xlabel('Fraction')
+    plt.ylabel(f'{normalize_method} normalized Intensity')
+    plt.title(f'{normalize_method} normalized Intensity for each Fraction')
+    plt.legend(title='Treatment')
+    plt.grid(True)
+
+    # Save the plot
+    plt.savefig(f"normalized diff total/{normalize_method}_normalized_Intensity_Boxplot_for_each_Fraction.png")
     plt.close()
 
 
@@ -448,6 +491,19 @@ if __name__ == '__main__':
         plot_gene_intensity(z_normalized_dmso, z_normalized_whel, i, "Z_norm")
         plot_gene_intensity(var_stab_normalized_dmso, var_stab_normalized_whel, i, "Variance Stabalize")
 
+    for i in hkg:
+        plot_diff(nsaf_normalized_dmso, nsaf_normalized_whel, i, 'NSAF')
+        plot_diff(quantile_normalized_dmso, quantile_normalized_whel, i, 'Quantile')
+        plot_diff(z_normalized_dmso, z_normalized_whel, i, 'Z-Score')
+        plot_diff(var_stab_normalized_dmso, var_stab_normalized_whel, i, 'Variance Stabalize')
+        plot_diff(tic_normalized_dmso, tic_normalized_whel, i, 'TIC')
+
+    plot_fraction_boxplots(nsaf_normalized_dmso, nsaf_normalized_whel, 'NSAF')
+    plot_fraction_boxplots(quantile_normalized_dmso, quantile_normalized_whel, 'Quantile')
+    plot_fraction_boxplots(z_normalized_dmso, z_normalized_whel,  'Z-Score')
+    plot_fraction_boxplots(var_stab_normalized_dmso, var_stab_normalized_whel, 'Variance Stabalize')
+    plot_fraction_boxplots(tic_normalized_dmso, tic_normalized_whel, 'TIC')
+
 
     ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
     ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
@@ -476,11 +532,6 @@ if __name__ == '__main__':
     ccp_tic = pd.merge(ccp, top_tic, on = "Genes", how = "inner")
     ccp_var = pd.merge(ccp, top_var, on = "Genes", how = "inner")
 
-    plot_diff(nsaf_normalized_dmso, nsaf_normalized_whel, 'GUSB', 'NSAF')
-    plot_diff(quantile_normalized_dmso, quantile_normalized_whel, 'GUSB', 'quantile')
-    plot_diff(z_normalized_dmso, z_normalized_whel, 'GUSB', 'z')
-    plot_diff(var_stab_normalized_dmso, var_stab_normalized_whel, 'GUSB', 'var_stab')
-    plot_diff(tic_normalized_dmso, tic_normalized_whel, 'GUSB', 'tic')
 
     # Try to subset the cell cycle pathway proteins o the top 5 percent KS score of normalization
     # top_nsaf_df = top_nsaf[top_nsaf['Genes'].isin(union_set)]

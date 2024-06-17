@@ -324,16 +324,15 @@ def plot_gene_intensity(DMSO_df, whel_df, gene_name, normalize_mehod):
     plt.close()
 
 
-def plot_diff(DMSO_df, whel_df, gene_name, normalize_mehod):
+def plot_diff(DMSO_df, whel_df, gene_name, normalize_method):
     """
-
     :param dmso:
     :param whel:
     :param gene:
     :param method:
     :return:
     """
-    # Filter the dataframes to only include the specified gene
+    # Filter the DataFrames to only include the specified gene
     DMSO_gene_data = DMSO_df[DMSO_df['Genes'] == gene_name]
     whel_gene_data = whel_df[whel_df['Genes'] == gene_name]
 
@@ -352,25 +351,29 @@ def plot_diff(DMSO_df, whel_df, gene_name, normalize_mehod):
     combined_df['Run'] = pd.to_numeric(combined_df['Run'])
     combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
 
-    plt.figure(figsize=(12, 8))
-    sns.lineplot(data=combined_df, x='Fraction', y='Intensity', hue='Treatment', style='Treatment', markers=True,
-                 errorbar ='sd', err_style='band')
+    # Calculate the sum of intensity for each fraction
+    sum_df = combined_df.groupby(['Treatment', 'Fraction'])['Intensity'].sum().reset_index()
 
-    x_labels = [f"F{i}" for i in range(1,10)]
-    plt.xticks(ticks=range(1, 10), labels=x_labels)
+    # Pivot the DataFrame to have DMSO and whel in separate columns
+    pivot_df = sum_df.pivot(index='Fraction', columns='Treatment', values='Intensity').reset_index()
 
-    # plt.ylim(-0.2, 1)
+    # Calculate the difference between DMSO and whel
+    pivot_df['Difference'] = pivot_df.apply(
+        lambda row: ((row['DMSO'] - row['whel']) / (row['DMSO'] + row["whel"]) * 100) if (row['DMSO'] + row["whel"]) != 0 else 0, axis=1
+    )
 
+
+    sns.lineplot(data=pivot_df, x='Fraction', y='Difference', marker='o')
     plt.xlabel('Fraction')
-    plt.ylabel(f'{normalize_mehod} normalized Intensity')
-    plt.title(f'{normalize_mehod} normalized Intensity for {gene_name} for each DMSO and Whel run')
-    plt.legend(title='Treatment')
+    plt.ylabel(f'{normalize_method} normalized Intensity Difference')
+    plt.title(f'{normalize_method} normalized Intensity Difference for {gene_name}')
     plt.grid(True)
 
-    # Save the plot
-    plt.savefig(f"img/{normalize_mehod} normalized Intensity for {gene_name} for each DMSO and Whel run.png")
-    plt.close()
+    plt.ylim(-100,100)
 
+    # Save the plot
+    plt.savefig(f"{normalize_method} normalized Intensity for {gene_name} for each DMSO and Whel run.png")
+    plt.close()
 
 
 def one_to_five_and_to_nine_average(df):
@@ -473,6 +476,11 @@ if __name__ == '__main__':
     ccp_tic = pd.merge(ccp, top_tic, on = "Genes", how = "inner")
     ccp_var = pd.merge(ccp, top_var, on = "Genes", how = "inner")
 
+    plot_diff(nsaf_normalized_dmso, nsaf_normalized_whel, 'GUSB', 'NSAF')
+    plot_diff(quantile_normalized_dmso, quantile_normalized_whel, 'GUSB', 'quantile')
+    plot_diff(z_normalized_dmso, z_normalized_whel, 'GUSB', 'z')
+    plot_diff(var_stab_normalized_dmso, var_stab_normalized_whel, 'GUSB', 'var_stab')
+    plot_diff(tic_normalized_dmso, tic_normalized_whel, 'GUSB', 'tic')
 
     # Try to subset the cell cycle pathway proteins o the top 5 percent KS score of normalization
     # top_nsaf_df = top_nsaf[top_nsaf['Genes'].isin(union_set)]

@@ -382,7 +382,7 @@ def plot_diff(DMSO_df, whel_df, gene_name, normalize_method):
 
 def plot_fraction_boxplots(DMSO_df, whel_df, normalize_method):
     """
-    Plot box plots of intensities for each fraction.
+    Plot box plots of the percentage differences in mean intensities for each fraction between DMSO and whel treatments.
 
     :param DMSO_df: DataFrame containing DMSO data
     :param whel_df: DataFrame containing whel data
@@ -404,20 +404,33 @@ def plot_fraction_boxplots(DMSO_df, whel_df, normalize_method):
     combined_df['Run'] = pd.to_numeric(combined_df['Run'])
     combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
 
-    # Plot the box plots for each fraction
+    # Calculate the mean intensities for each gene, fraction, and treatment
+    mean_df = combined_df.groupby(['Genes', 'Fraction', 'Treatment'])['Intensity'].mean().reset_index()
+
+    # Pivot to get DMSO and whel in separate columns
+    pivot_df = mean_df.pivot_table(index=['Genes', 'Fraction'], columns='Treatment', values='Intensity').reset_index()
+
+    # Calculate the percentage difference in mean intensities between DMSO and whel
+    pivot_df['Percentage Difference'] = pivot_df.apply(
+        lambda row: ((abs(row['DMSO']) - abs(row['whel'])) / (abs(row['DMSO']) + abs(row["whel"]))) * 100 if (abs(
+            row['DMSO']) + abs(row["whel"])) != 0 else 0, axis=1
+    )
+
+    # Plot the box plots for the percentage differences in mean intensities for each fraction
     plt.figure(figsize=(15, 10))
-    sns.boxplot(data=combined_df, x='Fraction', y='Intensity', hue='Treatment')
+    sns.lineplot(data=pivot_df, x='Fraction', y='Percentage Difference', markers=True,
+                 errorbar ='sd', err_style='band')
+
+    plt.ylim(-100, 100)
 
     plt.xlabel('Fraction')
-    plt.ylabel(f'{normalize_method} normalized Intensity')
-    plt.title(f'{normalize_method} normalized Intensity for each Fraction')
-    plt.legend(title='Treatment')
+    plt.ylabel(f'{normalize_method} normalized Mean Intensity Percentage Difference')
+    plt.title(f'{normalize_method} normalized Mean Intensity Percentage Differences for each Fraction')
     plt.grid(True)
 
     # Save the plot
-    plt.savefig(f"normalized diff total/{normalize_method}_normalized_Intensity_Boxplot_for_each_Fraction.png")
+    plt.savefig(f"normalized diff total/{normalize_method}_normalized_Intensity_Percentage_Difference_Boxplot_for_each_Fraction.png")
     plt.close()
-
 
 def one_to_five_and_to_nine_average(df):
     """
@@ -482,57 +495,62 @@ if __name__ == '__main__':
     var_stab_normalized_dmso = var_stab_normalization(dmso_shared)
     var_stab_normalized_whel = var_stab_normalization(whel_shared)
 
-    # Plot normalizations
-    hkg = ["ACTB", "GAPDH", "B2M",  "GUSB", "TBP", "PGK1"]
-    for i in hkg:
-        plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
-        plot_gene_intensity(tic_normalized_dmso, tic_normalized_whel, i, "TIC")
-        plot_gene_intensity(quantile_normalized_dmso, quantile_normalized_whel, i, "Quantile")
-        plot_gene_intensity(z_normalized_dmso, z_normalized_whel, i, "Z_norm")
-        plot_gene_intensity(var_stab_normalized_dmso, var_stab_normalized_whel, i, "Variance Stabalize")
-
-    for i in hkg:
-        plot_diff(nsaf_normalized_dmso, nsaf_normalized_whel, i, 'NSAF')
-        plot_diff(quantile_normalized_dmso, quantile_normalized_whel, i, 'Quantile')
-        plot_diff(z_normalized_dmso, z_normalized_whel, i, 'Z-Score')
-        plot_diff(var_stab_normalized_dmso, var_stab_normalized_whel, i, 'Variance Stabalize')
-        plot_diff(tic_normalized_dmso, tic_normalized_whel, i, 'TIC')
-
-    plot_fraction_boxplots(nsaf_normalized_dmso, nsaf_normalized_whel, 'NSAF')
-    plot_fraction_boxplots(quantile_normalized_dmso, quantile_normalized_whel, 'Quantile')
-    plot_fraction_boxplots(z_normalized_dmso, z_normalized_whel,  'Z-Score')
-    plot_fraction_boxplots(var_stab_normalized_dmso, var_stab_normalized_whel, 'Variance Stabalize')
-    plot_fraction_boxplots(tic_normalized_dmso, tic_normalized_whel, 'TIC')
-
-
+    # # Plot normalizations
+    # hkg = ["ACTB", "GAPDH", "B2M",  "GUSB", "TBP", "PGK1"]
+    # for i in hkg:
+    #     plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
+    #     plot_gene_intensity(tic_normalized_dmso, tic_normalized_whel, i, "TIC")
+    #     plot_gene_intensity(quantile_normalized_dmso, quantile_normalized_whel, i, "Quantile")
+    #     plot_gene_intensity(z_normalized_dmso, z_normalized_whel, i, "Z_norm")
+    #     plot_gene_intensity(var_stab_normalized_dmso, var_stab_normalized_whel, i, "Variance Stabalize")
+    #
+    # for i in hkg:
+    #     plot_diff(nsaf_normalized_dmso, nsaf_normalized_whel, i, 'NSAF')
+    #     plot_diff(quantile_normalized_dmso, quantile_normalized_whel, i, 'Quantile')
+    #     plot_diff(z_normalized_dmso, z_normalized_whel, i, 'Z-Score')
+    #     plot_diff(var_stab_normalized_dmso, var_stab_normalized_whel, i, 'Variance Stabalize')
+    #     plot_diff(tic_normalized_dmso, tic_normalized_whel, i, 'TIC')
+    #
+    # plot_fraction_boxplots(nsaf_normalized_dmso, nsaf_normalized_whel, 'NSAF')
+    # plot_fraction_boxplots(quantile_normalized_dmso, quantile_normalized_whel, 'Quantile')
+    # plot_fraction_boxplots(z_normalized_dmso, z_normalized_whel,  'Z-Score')
+    # plot_fraction_boxplots(var_stab_normalized_dmso, var_stab_normalized_whel, 'Variance Stabalize')
+    # plot_fraction_boxplots(tic_normalized_dmso, tic_normalized_whel, 'TIC')
+    #
+    #
     ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
     ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
     # ks_median_df = ks_test_total(median_normalized_dmso, median_normalized_whel)
     ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
     ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
     ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
+    #
+    # plot_ks_result_histogram(ks_z_df, "Z-Score")
+    # plot_ks_result_histogram(ks_quantile_df, "Quantile")
+    # plot_ks_result_histogram(ks_nsaf_df, "NSAF")
+    # plot_ks_result_histogram(ks_tic_df, "TIC")
+    # plot_ks_result_histogram(ks_var_df, "Variance Stabalized")
+    #
+    #
+    # # Get the top 5 percent of the p_value
+    # top_nsaf = top_5_percent(ks_nsaf_df)
+    # top_z = top_5_percent(ks_z_df)
+    # top_quantile = top_5_percent(ks_quantile_df)
+    # top_tic = top_5_percent(ks_tic_df)
+    # top_var = top_5_percent(ks_var_df)
+    #
+    # ccp_nsaf = pd.merge(ccp, top_nsaf, on = "Genes", how = "inner")
+    # ccp_z = pd.merge(ccp, top_z, on = "Genes", how = "inner")
+    # ccp_quantile = pd.merge(ccp, top_quantile, on = "Genes", how = "inner")
+    # ccp_tic = pd.merge(ccp, top_tic, on = "Genes", how = "inner")
+    # ccp_var = pd.merge(ccp, top_var, on = "Genes", how = "inner")
 
-    plot_ks_result_histogram(ks_z_df, "Z-Score")
-    plot_ks_result_histogram(ks_quantile_df, "Quantile")
-    plot_ks_result_histogram(ks_nsaf_df, "NSAF")
-    plot_ks_result_histogram(ks_tic_df, "TIC")
-    plot_ks_result_histogram(ks_var_df, "Variance Stabalized")
 
 
-    # Get the top 5 percent of the p_value
-    top_nsaf = top_5_percent(ks_nsaf_df)
-    top_z = top_5_percent(ks_z_df)
-    top_quantile = top_5_percent(ks_quantile_df)
-    top_tic = top_5_percent(ks_tic_df)
-    top_var = top_5_percent(ks_var_df)
 
-    ccp_nsaf = pd.merge(ccp, top_nsaf, on = "Genes", how = "inner")
-    ccp_z = pd.merge(ccp, top_z, on = "Genes", how = "inner")
-    ccp_quantile = pd.merge(ccp, top_quantile, on = "Genes", how = "inner")
-    ccp_tic = pd.merge(ccp, top_tic, on = "Genes", how = "inner")
-    ccp_var = pd.merge(ccp, top_var, on = "Genes", how = "inner")
-
-
+"""
+Seperation
+"""
     # Try to subset the cell cycle pathway proteins o the top 5 percent KS score of normalization
     # top_nsaf_df = top_nsaf[top_nsaf['Genes'].isin(union_set)]
     # top_z_df = top_z[top_z['Genes'].isin(union_set)]

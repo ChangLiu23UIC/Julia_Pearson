@@ -4,7 +4,7 @@ from scipy.stats import ks_2samp
 import numpy as np
 from pathway_construction import *
 from Normalization_methods import *
-from scipy.stats import ttest_rel
+from scipy.stats import ttest_rel, combine_pvalues
 import warnings
 from bokeh.plotting import figure, show, output_file
 from bokeh.models import HoverTool, ColumnDataSource
@@ -474,9 +474,13 @@ def create_volcano_bokeh(dmso_df, wheldone_df, gene_column='Genes', pseudocount=
     min_value = min(dmso_df.iloc[:, 1:].min().min(), wheldone_df.iloc[:, 1:].min().min())
     shift_value = abs(min_value) + pseudocount if min_value < 0 else pseudocount
 
-    # Iterate over each gene (each row)
+    # Create a dictionary to store p-values for each gene
+    gene_pvalues = {}
+
+    # Iterate over each gene
     for index, row in dmso_df.iterrows():
         gene = row[gene_column]
+        gene_pvalues[gene] = []
         for fraction in fractions:
             # Extract values for the current fraction from both dataframes
             dmso_values = dmso_df.filter(regex=f'DMSO-.*-{fraction}').loc[index].values.astype(float)
@@ -500,6 +504,14 @@ def create_volcano_bokeh(dmso_df, wheldone_df, gene_column='Genes', pseudocount=
                 p_value = 1.0
             p_values.append(p_value)
             genes.append(gene)
+            gene_pvalues[gene].append(p_value)
+
+    # Aggregate p-values for each gene using Fisher's method
+    aggregated_pvalues = {}
+    for gene, pvals in gene_pvalues.items():
+        if pvals:
+            _, combined_pvalue = combine_pvalues(pvals)
+            aggregated_pvalues[gene] = combined_pvalue
 
     # Create a dataframe to hold the results
     results_df = pd.DataFrame({
@@ -509,20 +521,28 @@ def create_volcano_bokeh(dmso_df, wheldone_df, gene_column='Genes', pseudocount=
     })
     results_df['-log10_p_value'] = -np.log10(results_df['p_value'])
 
+    # Create a dataframe to hold the aggregated results
+    aggregated_results = pd.DataFrame({
+        gene_column: list(aggregated_pvalues.keys()),
+        'combined_p_value': list(aggregated_pvalues.values())
+    })
+    aggregated_results['-log10_combined_p_value'] = -np.log10(aggregated_results['combined_p_value'])
+
     # Prepare data for Bokeh
     source = ColumnDataSource(results_df)
+    aggregated_source = ColumnDataSource(aggregated_results)
 
     # Create Bokeh plot
     p = figure(title="Volcano Plot", x_axis_label="Log2 Fold Change", y_axis_label="-Log10 P-value",
                tools="pan,wheel_zoom,box_zoom,reset,save")
 
-    p.circle('log2_fc', '-log10_p_value', size=8, source=source,
+    p.scatter('log2_fc', '-log10_p_value', size=8, source=source,
              fill_alpha=0.6, color='grey', legend_label='All genes')
 
-    significant_genes = results_df[results_df['p_value'] < 0.05]
+    significant_genes = aggregated_results[aggregated_results['combined_p_value'] < 0.05]
     if not significant_genes.empty:
         source_sig = ColumnDataSource(significant_genes)
-        p.circle('log2_fc', '-log10_p_value', size=8, source=source_sig,
+        p.scatter('log2_fc', '-log10_combined_p_value', size=8, source=source_sig,
                  fill_alpha=0.6, color='red', legend_label='Significant genes (p < 0.05)')
 
     hover = HoverTool()
@@ -535,6 +555,7 @@ def create_volcano_bokeh(dmso_df, wheldone_df, gene_column='Genes', pseudocount=
 
     output_file("volcano.html")
     show(p)
+
 
 if __name__ == '__main__':
     print("Hello")

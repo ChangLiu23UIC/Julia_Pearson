@@ -4,6 +4,13 @@ from scipy.stats import ks_2samp
 import numpy as np
 from pathway_construction import *
 from Normalization_methods import *
+from scipy.stats import ttest_rel
+import warnings
+from bokeh.plotting import figure, show, output_file
+from bokeh.models import HoverTool, ColumnDataSource
+from bokeh.io import output_notebook
+
+
 
 # def whel_dmso_subset(df):
 #     """
@@ -456,6 +463,79 @@ def one_to_five_and_to_nine_average(df):
     return df_sorted
 
 
+def create_volcano_bokeh(dmso_df, wheldone_df, gene_column='Genes', pseudocount=1e-6):
+    # Initialize lists to hold log2 fold changes and p-values
+    log2_fc = []
+    p_values = []
+    genes = []
+    fractions = sorted(set(col.split('-')[2] for col in dmso_df.columns if col != gene_column))
+
+    # Find the minimum value in both dataframes to determine the shift needed
+    min_value = min(dmso_df.iloc[:, 1:].min().min(), wheldone_df.iloc[:, 1:].min().min())
+    shift_value = abs(min_value) + pseudocount if min_value < 0 else pseudocount
+
+    # Iterate over each gene (each row)
+    for index, row in dmso_df.iterrows():
+        gene = row[gene_column]
+        for fraction in fractions:
+            # Extract values for the current fraction from both dataframes
+            dmso_values = dmso_df.filter(regex=f'DMSO-.*-{fraction}').loc[index].values.astype(float)
+            wheldone_values = wheldone_df.filter(regex=f'whel-.*-{fraction}').loc[index].values.astype(float)
+
+            # Add shift value to avoid negative and zero values
+            dmso_values = dmso_values + shift_value
+            wheldone_values = wheldone_values + shift_value
+
+            # Calculate log2 fold change for this fraction
+            log2_fc_value = np.log2(np.mean(wheldone_values) / np.mean(dmso_values))
+            log2_fc.append(log2_fc_value)
+
+            # Calculate p-value using paired t-test, handling precision loss warning
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=RuntimeWarning)
+                t_stat, p_value = ttest_rel(dmso_values, wheldone_values)
+
+            # Handle NaN p-values
+            if np.isnan(p_value):
+                p_value = 1.0
+            p_values.append(p_value)
+            genes.append(gene)
+
+    # Create a dataframe to hold the results
+    results_df = pd.DataFrame({
+        gene_column: genes,
+        'log2_fc': log2_fc,
+        'p_value': p_values
+    })
+    results_df['-log10_p_value'] = -np.log10(results_df['p_value'])
+
+    # Prepare data for Bokeh
+    source = ColumnDataSource(results_df)
+
+    # Create Bokeh plot
+    p = figure(title="Volcano Plot", x_axis_label="Log2 Fold Change", y_axis_label="-Log10 P-value",
+               tools="pan,wheel_zoom,box_zoom,reset,save")
+
+    p.circle('log2_fc', '-log10_p_value', size=8, source=source,
+             fill_alpha=0.6, color='grey', legend_label='All genes')
+
+    significant_genes = results_df[results_df['p_value'] < 0.05]
+    if not significant_genes.empty:
+        source_sig = ColumnDataSource(significant_genes)
+        p.circle('log2_fc', '-log10_p_value', size=8, source=source_sig,
+                 fill_alpha=0.6, color='red', legend_label='Significant genes (p < 0.05)')
+
+    hover = HoverTool()
+    hover.tooltips = [("Gene", f"@{gene_column}"), ("Log2 Fold Change", "@log2_fc"),
+                      ("-Log10 P-value", "@-log10_p_value")]
+    p.add_tools(hover)
+
+    p.legend.location = "top_left"
+    p.legend.click_policy = "hide"
+
+    output_file("volcano.html")
+    show(p)
+
 if __name__ == '__main__':
     print("Hello")
 
@@ -518,12 +598,14 @@ if __name__ == '__main__':
     # plot_fraction_boxplots(tic_normalized_dmso, tic_normalized_whel, 'TIC')
     #
     #
-    ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
-    ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
-    # ks_median_df = ks_test_total(median_normalized_dmso, median_normalized_whel)
-    ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
-    ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
-    ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
+    # ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
+    # ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
+    # # ks_median_df = ks_test_total(median_normalized_dmso, median_normalized_whel)
+    # ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
+    # ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
+    # ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
+
+    create_volcano_bokeh(z_normalized_dmso, z_normalized_whel)
     #
     # plot_ks_result_histogram(ks_z_df, "Z-Score")
     # plot_ks_result_histogram(ks_quantile_df, "Quantile")

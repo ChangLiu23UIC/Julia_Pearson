@@ -412,7 +412,7 @@ def plot_fraction_boxplots(DMSO_df, whel_df, normalize_method):
     combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
 
     # Calculate the mean intensities for each gene, fraction, and treatment
-    mean_df = combined_df.groupby(['Genes', 'Fraction', 'Treatment'])['Intensity'].mean().reset_index()
+    mean_df = combined_df.groupby(['Genes', 'Fraction', 'Treatment'])['Intensity'].median().reset_index()
 
     # Pivot to get DMSO and whel in separate columns
     pivot_df = mean_df.pivot_table(index=['Genes', 'Fraction'], columns='Treatment', values='Intensity').reset_index()
@@ -426,7 +426,7 @@ def plot_fraction_boxplots(DMSO_df, whel_df, normalize_method):
     # Plot the box plots for the percentage differences in mean intensities for each fraction
     plt.figure(figsize=(15, 10))
     sns.lineplot(data=pivot_df, x='Fraction', y='Percentage Difference', markers=True,
-                 errorbar ='sd', err_style='band')
+                 errorbar ='se', err_style='band')
 
     plt.ylim(-100, 100)
 
@@ -463,7 +463,7 @@ def one_to_five_and_to_nine_average(df):
     return df_sorted
 
 
-def create_volcano_bokeh(dmso_df, wheldone_df, gene_column='Genes', pseudocount=1e-6):
+def create_volcano_bokeh_paired(dmso_df, wheldone_df, gene_column='Genes', pseudocount=1e-6):
     # Initialize lists to hold log2 fold changes and p-values
     log2_fc = []
     p_values = []
@@ -557,6 +557,130 @@ def create_volcano_bokeh(dmso_df, wheldone_df, gene_column='Genes', pseudocount=
     show(p)
 
 
+def create_volcano_bokeh_overall(dmso_df, wheldone_df, method, gene_column='Genes', pseudocount=1e-6):
+    # Initialize lists to hold log2 fold changes and p-values
+    log2_fc = []
+    p_values = []
+    genes = []
+
+    # Find the minimum value in both dataframes to determine the shift needed
+    min_value = min(dmso_df.iloc[:, 1:].min().min(), wheldone_df.iloc[:, 1:].min().min())
+    shift_value = abs(min_value) + pseudocount if min_value < 0 else pseudocount
+
+    # Iterate over each gene (each row)
+    for index, row in dmso_df.iterrows():
+        gene = row[gene_column]
+        dmso_values = dmso_df.loc[index].drop(gene_column).values.astype(float)
+        wheldone_values = wheldone_df.loc[index].drop(gene_column).values.astype(float)
+
+        # Add shift value to avoid negative and zero values
+        dmso_values = dmso_values + shift_value
+        wheldone_values = wheldone_values + shift_value
+
+        # Calculate log2 fold change for this gene
+        log2_fc_value = np.log2(np.mean(wheldone_values) / np.mean(dmso_values))
+        log2_fc.append(log2_fc_value)
+
+        # Calculate p-value using paired t-test, handling precision loss warning
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=RuntimeWarning)
+            t_stat, p_value = ttest_rel(dmso_values, wheldone_values)
+
+        # Handle NaN p-values
+        if np.isnan(p_value):
+            p_value = 1.0
+        p_values.append(p_value)
+        genes.append(gene)
+
+    # Create a dataframe to hold the results
+    results_df = pd.DataFrame({
+        gene_column: genes,
+        'log2_fc': log2_fc,
+        'p_value': p_values
+    })
+    results_df['-log10_p_value'] = -np.log10(results_df['p_value'])
+
+    # Prepare data for Bokeh
+    source = ColumnDataSource(results_df)
+
+    # Create Bokeh plot
+    p = figure(title=f"Volcano Plot for {method}", x_axis_label="Log2 Fold Change (Whel / DMSO)", y_axis_label="-Log10 P-value",
+               tools="pan,wheel_zoom,box_zoom,reset,save")
+
+    p.scatter('log2_fc', '-log10_p_value', size=8, source=source,
+             fill_alpha=0.6, color='grey', legend_label='All genes')
+
+    significant_genes = results_df[results_df['p_value'] < 0.05]
+    if not significant_genes.empty:
+        source_sig = ColumnDataSource(significant_genes)
+        p.scatter('log2_fc', '-log10_p_value', size=8, source=source_sig,
+                 fill_alpha=0.6, color='red', legend_label='Significant genes (p < 0.05)')
+
+    hover = HoverTool()
+    hover.tooltips = [("Gene", f"@{gene_column}"), ("Log2 Fold Change", "@log2_fc"),
+                      ("-Log10 P-value", "@-log10_p_value")]
+    p.add_tools(hover)
+
+    p.legend.location = "top_left"
+    p.legend.click_policy = "hide"
+
+    output_file(f"Overall_volcano_bokeh/{method}.html")
+    show(p)
+
+def create_ks_volcano_bokeh(ks_df, method, gene_column='Genes'):
+    # Initialize lists to hold KS scores and p-values
+    ks_scores = 1 / ( 1 - ks_df['KS_Statistic'].values)
+    p_values = ks_df['P_Value'].values
+    genes = ks_df[gene_column].values
+
+    # Create a dataframe to hold the results
+    results_df = pd.DataFrame({
+        gene_column: genes,
+        'ks_score': ks_scores,
+        'p_value': p_values
+    })
+    results_df['-log10_p_value'] = -np.log10(results_df['p_value'])
+
+    # Prepare data for Bokeh
+    source = ColumnDataSource(results_df)
+
+    # Create Bokeh plot
+    p = figure(title=f"Volcano Plot (KS Scores) for {method}", x_axis_label="KS Score Modified 1/(1-KS)", y_axis_label="-Log10 P-value",
+               tools="pan,wheel_zoom,box_zoom,reset,save")
+
+    p.scatter('ks_score', '-log10_p_value', size=8, source=source,
+             fill_alpha=0.6, color='grey', legend_label='All genes')
+
+    significant_genes = results_df[results_df['p_value'] < 0.05]
+    if not significant_genes.empty:
+        source_sig = ColumnDataSource(significant_genes)
+        p.scatter('ks_score', '-log10_p_value', size=8, source=source_sig,
+                 fill_alpha=0.6, color='red', legend_label='Significant genes (p < 0.05)')
+
+    hover = HoverTool()
+    hover.tooltips = [("Gene", f"@{gene_column}"), ("KS Modified", "@ks_score"),
+                      ("-Log10 P-value", "@-log10_p_value")]
+    p.add_tools(hover)
+
+    p.legend.location = "top_left"
+    p.legend.click_policy = "hide"
+
+    output_file(f"KS_bokeh/{method}_ks.html")
+    show(p)
+
+
+def subset_by_pathway(df, gene_list):
+    """
+    Subset the dataframe with list, two at once
+    :param DMSO:
+    :param whel:
+    :param gene_list:
+    :return:
+    """
+    sub_df = df[df["Genes"].isin(gene_list)]
+    return sub_df
+
+
 if __name__ == '__main__':
     print("Hello")
 
@@ -596,6 +720,13 @@ if __name__ == '__main__':
     var_stab_normalized_dmso = var_stab_normalization(dmso_shared)
     var_stab_normalized_whel = var_stab_normalization(whel_shared)
 
+    """
+    Z-Score on NSAF
+    """
+    nsaf_z_normalized_dmso = z_normalization(nsaf_normalized_dmso)
+    nsaf_z_normalized_whel = z_normalization(nsaf_normalized_whel)
+
+
     # # Plot normalizations
     # hkg = ["ACTB", "GAPDH", "B2M",  "GUSB", "TBP", "PGK1"]
     # for i in hkg:
@@ -617,22 +748,46 @@ if __name__ == '__main__':
     # plot_fraction_boxplots(z_normalized_dmso, z_normalized_whel,  'Z-Score')
     # plot_fraction_boxplots(var_stab_normalized_dmso, var_stab_normalized_whel, 'Variance Stabalize')
     # plot_fraction_boxplots(tic_normalized_dmso, tic_normalized_whel, 'TIC')
-    #
-    #
-    # ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
-    # ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
-    # # ks_median_df = ks_test_total(median_normalized_dmso, median_normalized_whel)
-    # ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
-    # ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
-    # ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
+    # plot_fraction_boxplots(nsaf_z_normalized_dmso, nsaf_z_normalized_whel, "NSAF-Z")
 
-    create_volcano_bokeh(z_normalized_dmso, z_normalized_whel)
+    plot_fraction_boxplots(subset_by_pathway(nsaf_normalized_dmso, ccp_genes), subset_by_pathway(nsaf_normalized_whel, ccp_genes), 'NSAF_CCP')
+    plot_fraction_boxplots(subset_by_pathway(quantile_normalized_dmso, ccp_genes), subset_by_pathway(quantile_normalized_whel, ccp_genes), 'Quantile_CCP')
+    plot_fraction_boxplots(subset_by_pathway(z_normalized_dmso, ccp_genes), subset_by_pathway(z_normalized_whel, ccp_genes),  'Z-Score_CCP')
+    plot_fraction_boxplots(subset_by_pathway(var_stab_normalized_dmso, ccp_genes), subset_by_pathway(var_stab_normalized_whel, ccp_genes), 'Variance Stabalize_CCP')
+    plot_fraction_boxplots(subset_by_pathway(tic_normalized_dmso, ccp_genes), subset_by_pathway(tic_normalized_whel, ccp_genes), 'TIC_CCP')
+    plot_fraction_boxplots(subset_by_pathway(nsaf_z_normalized_dmso, ccp_genes), subset_by_pathway(nsaf_z_normalized_whel, ccp_genes), "NSAF-Z_CCP")
+    #
+    #
+    ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
+    ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
+    # ks_median_df = ks_test_total(median_normalized_dmso, median_normalized_whel)
+    ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
+    ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
+    ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
+    ks_nsaf_z_df = ks_test_total(nsaf_z_normalized_dmso, nsaf_z_normalized_whel)
+
+    create_volcano_bokeh_overall(z_normalized_dmso, z_normalized_whel, "Z")
+    create_volcano_bokeh_overall(quantile_normalized_dmso, quantile_normalized_whel, "Quantile")
+    create_volcano_bokeh_overall(nsaf_normalized_dmso, nsaf_normalized_whel, "NSAF")
+    create_volcano_bokeh_overall(tic_normalized_dmso, tic_normalized_whel, "TIC")
+    create_volcano_bokeh_overall(var_stab_normalized_dmso, var_stab_normalized_whel, "VAR")
+    create_volcano_bokeh_overall(nsaf_z_normalized_dmso, nsaf_z_normalized_whel, "NSAF-Z")
+
+    create_ks_volcano_bokeh(ks_nsaf_df, "NSAF")
+    create_ks_volcano_bokeh(ks_z_df, "Z")
+    create_ks_volcano_bokeh(ks_quantile_df, "Quantile")
+    create_ks_volcano_bokeh(ks_tic_df, "TIC")
+    create_ks_volcano_bokeh(ks_var_df, "VAR")
+    create_ks_volcano_bokeh(ks_nsaf_z_df, "NSAF-Z")
+
+
     #
     # plot_ks_result_histogram(ks_z_df, "Z-Score")
     # plot_ks_result_histogram(ks_quantile_df, "Quantile")
     # plot_ks_result_histogram(ks_nsaf_df, "NSAF")
     # plot_ks_result_histogram(ks_tic_df, "TIC")
     # plot_ks_result_histogram(ks_var_df, "Variance Stabalized")
+    # plot_ks_result_histogram(ks_nsaf_z_df, "NSAF-Z")
     #
     #
     # # Get the top 5 percent of the p_value
@@ -641,12 +796,14 @@ if __name__ == '__main__':
     # top_quantile = top_5_percent(ks_quantile_df)
     # top_tic = top_5_percent(ks_tic_df)
     # top_var = top_5_percent(ks_var_df)
+    # top_nsaf_z = top_5_percent(ks_nsaf_z_df)
     #
     # ccp_nsaf = pd.merge(ccp, top_nsaf, on = "Genes", how = "inner")
     # ccp_z = pd.merge(ccp, top_z, on = "Genes", how = "inner")
     # ccp_quantile = pd.merge(ccp, top_quantile, on = "Genes", how = "inner")
     # ccp_tic = pd.merge(ccp, top_tic, on = "Genes", how = "inner")
     # ccp_var = pd.merge(ccp, top_var, on = "Genes", how = "inner")
+    # ccp_nsaf_z = pd.merge(ccp, top_nsaf_z, on = "Genes", how = "inner")
 
 
 

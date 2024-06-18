@@ -273,6 +273,7 @@ def rename_dataframe_columns(df):
 
 # Read all the files needed
 ccp = pd.read_excel("ccp.xlsx", "Atlas")
+ccp_genes = list(set(ccp["Genes"]))
 df_new = pd.read_csv("1-6_MBR.tsv", delimiter= "\t")
 df_new_filtered = df_new[~df_new['Protein'].str.startswith('tr|') & ~df_new['Protein'].str.contains('contam')]
 intensity_pattern = r'F\d+_\d+ Intensity'

@@ -324,10 +324,10 @@ if __name__ == '__main__':
     experiment_columns = column_group(intensity_df)
     #
     experiment_pearson = dataframe_work(intensity_df, experiment_columns)
-    # experiment_spearman = dataframe_work_spearman(intensity_df, experiment_columns)
+    experiment_spearman = dataframe_work_spearman(intensity_df, experiment_columns)
     #
-    # final_result_pearson = transform_correlation_dict(experiment_pearson)
-    # final_result_spearman = transform_correlation_dict(experiment_spearman)
+    final_result_pearson = transform_correlation_dict(experiment_pearson)
+    final_result_spearman = transform_correlation_dict(experiment_spearman)
     #
-    # final_result_pearson.sort_values(by='Fraction').to_excel("Final_result_Pearson.xlsx", index = False)
-    # final_result_spearman.sort_values(by='Fraction').to_excel("Final_result_Spearman.xlsx", index = False)
+    final_result_pearson.sort_values(by='Fraction').to_excel("Pearson_MBR.xlsx", index = False)
+    final_result_spearman.sort_values(by='Fraction').to_excel("Spearman_MBR.xlsx", index = False)

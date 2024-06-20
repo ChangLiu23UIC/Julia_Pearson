@@ -178,7 +178,7 @@ def top_5_percent(df, column_name = "P_Value"):
     Returns the top 5% of the data in the specified column of the DataFrame.
     """
     df_sorted = df.sort_values(by = column_name)
-    threshold = df_sorted.iloc[int((df_sorted.shape[0]-1)*0.05)]["P_Value"]
+    threshold = df_sorted.iloc[int((df_sorted.shape[0]-1)*0.03)]["P_Value"]
     subset_df = df[df['P_Value'] <= threshold]
 
     return subset_df

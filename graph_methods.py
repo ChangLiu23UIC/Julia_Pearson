@@ -801,18 +801,18 @@ if __name__ == '__main__':
 
 
     # # Plot normalizations
-    hkg = ["AURKA","CCNB1","KIF11","KIFC1","PLK1","PRC1","TACC3"]
+    hkg = ["AURKA","CCNB1","KIF11","KIFC1","PLK1","PRC1","TACC3", "RIPK1"]
     for i in hkg:
-        # plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
+        plot_gene_intensity(nsaf_normalized_dmso, nsaf_normalized_whel, i, "NSAF")
         plot_gene_intensity(tic_normalized_dmso, tic_normalized_whel, i, "TIC")
         plot_gene_intensity(quantile_normalized_dmso, quantile_normalized_whel, i, "Quantile")
-        # plot_gene_intensity(z_normalized_dmso, z_normalized_whel, i, "Z_norm")
+        plot_gene_intensity(z_normalized_dmso, z_normalized_whel, i, "Z_norm")
         plot_gene_intensity(var_stab_normalized_dmso, var_stab_normalized_whel, i, "Variance Stabalize")
 
     for i in hkg:
-        # plot_diff(nsaf_normalized_dmso, nsaf_normalized_whel, i, 'NSAF')
+        plot_diff(nsaf_normalized_dmso, nsaf_normalized_whel, i, 'NSAF')
         plot_diff(quantile_normalized_dmso, quantile_normalized_whel, i, 'Quantile')
-        # plot_diff(z_normalized_dmso, z_normalized_whel, i, 'Z-Score')
+        plot_diff(z_normalized_dmso, z_normalized_whel, i, 'Z-Score')
         plot_diff(var_stab_normalized_dmso, var_stab_normalized_whel, i, 'Variance Stabalize')
         plot_diff(tic_normalized_dmso, tic_normalized_whel, i, 'TIC')
 
@@ -833,7 +833,7 @@ if __name__ == '__main__':
     # #
     # ks_z_df = ks_test_total(z_normalized_dmso, z_normalized_whel)
     # ks_quantile_df = ks_test_total(quantile_normalized_dmso, quantile_normalized_whel)
-    # ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
+    ks_nsaf_df = ks_test_total(nsaf_normalized_dmso, nsaf_normalized_whel)
     # ks_tic_df = ks_test_total(tic_normalized_dmso, tic_normalized_whel)
     # ks_var_df = ks_test_total(var_stab_normalized_dmso, var_stab_normalized_whel)
     # ks_nsaf_z_df = ks_test_total(nsaf_z_normalized_dmso, nsaf_z_normalized_whel)

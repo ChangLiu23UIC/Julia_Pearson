@@ -848,16 +848,16 @@ if __name__ == '__main__':
     #
     #
     # #
-    # # plot_ks_result_histogram(ks_z_df, "Z-Score")
-    # # plot_ks_result_histogram(ks_quantile_df, "Quantile")
-    # # plot_ks_result_histogram(ks_nsaf_df, "NSAF")
-    # # plot_ks_result_histogram(ks_tic_df, "TIC")
-    # # plot_ks_result_histogram(ks_var_df, "Variance Stabalized")
-    # # plot_ks_result_histogram(ks_nsaf_z_df, "NSAF-Z")
+    # plot_ks_result_histogram(ks_z_df, "Z-Score")
+    # plot_ks_result_histogram(ks_quantile_df, "Quantile")
+    # plot_ks_result_histogram(ks_nsaf_df, "NSAF")
+    # plot_ks_result_histogram(ks_tic_df, "TIC")
+    # plot_ks_result_histogram(ks_var_df, "Variance Stabalized")
+    # plot_ks_result_histogram(ks_nsaf_z_df, "NSAF-Z")
     # #
     # #
     # # # Get the top 5 percent of the p_value
-    # top_nsaf = top_5_percent(ks_nsaf_df)
+    top_nsaf = top_5_percent(ks_nsaf_df)
     # top_z = top_5_percent(ks_z_df)
     # top_quantile = top_5_percent(ks_quantile_df)
     # top_tic = top_5_percent(ks_tic_df)
@@ -872,6 +872,60 @@ if __name__ == '__main__':
     # ccp_nsaf_z = pd.merge(ccp, top_nsaf_z, on = "Genes", how = "inner")
 
 
+    # Pearson correlation of the data
+    # Assuming nsaf_normalized_dmso and nsaf_normalized_whel are defined DataFrames
+    df1 = nsaf_normalized_dmso.copy()
+    df2 = nsaf_normalized_whel.copy()
+
+    # Set the "Genes" column as the index for both DataFrames
+    df1.set_index('Genes', inplace=True)
+    df2.set_index('Genes', inplace=True)
+
+    # Ensure df2 columns match df1
+    df2.columns = df1.columns
+
+    # Aggregate by taking the mean of duplicate entries
+    df1 = df1.groupby(df1.index).mean()
+    df2 = df2.groupby(df2.index).mean()
+
+    # Initialize a dictionary to store the correlations
+    correlations = {}
+
+    # Iterate over each row (gene)
+    for gene in df1.index:
+        # Select the rows for the gene in both DataFrames
+        series1 = df1.loc[gene]
+        series2 = df2.loc[gene]
+
+        # Ensure that we are working with Series objects
+        if isinstance(series1, pd.DataFrame):
+            series1 = series1.squeeze()
+        if isinstance(series2, pd.DataFrame):
+            series2 = series2.squeeze()
+
+        # Print the types after squeezing
+        print(f"Type of series1 after squeezing for gene {gene}: {type(series1)}")
+        print(f"Type of series2 after squeezing for gene {gene}: {type(series2)}")
+
+        # Drop NaN values to avoid errors in correlation calculation
+        series1 = series1.dropna()
+        series2 = series2.dropna()
+
+        # Ensure both series have the same indices after dropping NaNs
+        common_idx = series1.index.intersection(series2.index)
+        series1 = series1[common_idx]
+        series2 = series2[common_idx]
+
+        # Compute Pearson correlation if there are valid indices
+        if not series1.empty and not series2.empty:
+            correlation = series1.corr(series2)
+        else:
+            correlation = float('nan')  # Assign NaN if there is insufficient data
+
+        correlations[gene] = correlation
+
+    correlation_df = pd.DataFrame.from_dict(correlations, orient='index', columns=['Pearson Correlation'])
+    print(correlation_df)
 
 
 """

@@ -916,6 +916,7 @@ if __name__ == '__main__':
         series1 = series1[common_idx]
         series2 = series2[common_idx]
 
+
         # Compute Pearson correlation if there are valid indices
         if not series1.empty and not series2.empty:
             correlation = series1.corr(series2)

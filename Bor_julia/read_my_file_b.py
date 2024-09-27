@@ -147,22 +147,25 @@ def nsaf_method(df):
     # Get columns that need to be divided
     columns_to_divide = [col for col in df.columns if col not in exclude_columns]
 
+    # Strip whitespace from column names to avoid issues
+    df.columns = df.columns.str.strip()
+
+    # Make a copy of the DataFrame to avoid 'SettingWithCopyWarning'
+    df = df.copy()
+
     # Ensure 'Protein Length' and other relevant columns are float64 to avoid division errors
-    df = df.copy()  # Make a copy of the DataFrame to avoid 'SettingWithCopyWarning'
     df['Protein Length'] = df['Protein Length'].astype('float64')
-    df.loc[:, columns_to_divide] = df.loc[:, columns_to_divide].astype('float64')
+
+    # Explicitly cast all relevant columns to 'float64' in a loop
+    for col in columns_to_divide:
+        # Strip any potential whitespace from the column names
+        col = col.strip()
+        df[col] = df[col].astype('float64')
 
     # Perform division by 'Protein Length' for each relevant column
     for col in columns_to_divide:
-        # Avoid division by zero
-        df.loc[:, col] = df[col] / df['Protein Length'].replace(0, float('nan'))
-
-    # Calculate sum of the SAFs for each column after division (sumsafs)
-    sum_safs = df[columns_to_divide].sum()
-
-    # Calculate NSAF for each column by dividing by the sum of SAFs for each column
-    for col in columns_to_divide:
-        df.loc[:, col] = df[col] / sum_safs[col]
+        # Perform division and replace zero in 'Protein Length' with NaN to avoid division by zero
+        df[col] = df[col] / df['Protein Length'].replace(0, float('nan'))
 
     return df
 

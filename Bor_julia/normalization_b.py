@@ -2,6 +2,7 @@ import seaborn as sns
 from sklearn.preprocessing import QuantileTransformer
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def z_normalization(df):
@@ -96,3 +97,233 @@ def var_stab_normalization(df):
     df_vsn_normalized.insert(0, df.columns[0], genes_column)
 
     return df_vsn_normalized
+
+
+def all_norm_methods(df):
+    df_z = z_normalization(df)
+    df_tic = tic_normalization(df)
+    df_med = median_normalization(df)
+    df_quan = quantile_normalization(df)
+    df_var = var_stab_normalization(df)
+
+    return df_z, df_tic, df_med, df_quan, df_var
+
+
+def plot_gene_intensity_DP(DMSO_df, peng_df, gene_name, normalize_mehod):
+    """
+    This is to plot the gene intensity with both the DMSO and Wheldone dataframe on a specific gene.
+    :param DMSO_df:
+    :param whel_df:
+    :param gene_name:
+    :return:
+    """
+    # Filter the dataframes to only include the specified gene
+    DMSO_gene_data = DMSO_df[DMSO_df['Gene'] == gene_name]
+    # cipr_gene_data = cipr_df[cipr_df['Gene'] == gene_name]
+    # moxi_gene_data = moxi_df[moxi_df['Gene'] == gene_name]
+    peng_gene_data = peng_df[peng_df['Gene'] == gene_name]
+
+
+    # Reshape the DataFrames to long format
+    DMSO_long = pd.melt(DMSO_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    # cipr_long = pd.melt(cipr_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    # moxi_long = pd.melt(moxi_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    peng_long = pd.melt(peng_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+
+
+    # Extract run and fraction information
+    DMSO_long[['Treatment', 'Fraction']] = DMSO_long['Fraction'].str.extract(r'(DMSO)-F(\d+)')
+    # cipr_long[['Treatment', 'Fraction']] = cipr_long['Fraction'].str.extract(r'(Cipro)-F(\d+)')
+    # moxi_long[['Treatment', 'Fraction']] = moxi_long['Fraction'].str.extract(r'(Moxi)-F(\d+)')
+    peng_long[['Treatment', 'Fraction']] = peng_long['Fraction'].str.extract(r'(PenG)-F(\d+)')
+
+
+    # Combine the two DataFrames
+    combined_df = pd.concat([DMSO_long, peng_long])
+
+    # Convert relevant columns to numeric
+    combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
+
+    plt.figure(figsize=(12, 8))
+    sns.lineplot(data=combined_df, x='Fraction', y='Intensity', hue='Treatment', style='Treatment', markers=True,
+                 errorbar ='sd', err_style='band')
+
+    x_labels = [f"F{i}" for i in range(1,10)]
+    plt.xticks(ticks=range(1, 10), labels=x_labels)
+
+    # plt.ylim(-0.2, 1)
+
+    plt.xlabel('Fraction')
+    plt.ylabel(f'{normalize_mehod} normalized Intensity')
+    plt.title(f'{normalize_mehod} normalized Intensity for {gene_name} for each')
+    plt.legend(title='Treatment')
+    plt.grid(True)
+    plt.show()
+
+    # Save the plot
+    plt.savefig(f"Result/{normalize_mehod} normalized Intensity for {gene_name} for each DMSO and Whel run.png")
+
+
+def plot_gene_intensity_CM(DMSO_df, cipr_df, gene_name, normalize_mehod):
+    """
+    This is to plot the gene intensity with both the DMSO and Wheldone dataframe on a specific gene.
+    :param DMSO_df:
+    :param whel_df:
+    :param gene_name:
+    :return:
+    """
+    # Filter the dataframes to only include the specified gene
+    DMSO_gene_data = DMSO_df[DMSO_df['Gene'] == gene_name]
+    cipr_gene_data = cipr_df[cipr_df['Gene'] == gene_name]
+    # moxi_gene_data = moxi_df[moxi_df['Gene'] == gene_name]
+    # peng_gene_data = peng_df[peng_df['Gene'] == gene_name]
+
+
+    # Reshape the DataFrames to long format
+    DMSO_long = pd.melt(DMSO_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    cipr_long = pd.melt(cipr_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    # moxi_long = pd.melt(moxi_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    # peng_long = pd.melt(peng_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+
+
+    # Extract run and fraction information
+    DMSO_long[['Treatment', 'Fraction']] = DMSO_long['Fraction'].str.extract(r'(DMSO)-F(\d+)')
+    cipr_long[['Treatment', 'Fraction']] = cipr_long['Fraction'].str.extract(r'(Cipro)-F(\d+)')
+    # moxi_long[['Treatment', 'Fraction']] = moxi_long['Fraction'].str.extract(r'(Moxi)-F(\d+)')
+    # peng_long[['Treatment', 'Fraction']] = peng_long['Fraction'].str.extract(r'(PenG)-F(\d+)')
+
+
+    # Combine the two DataFrames
+    combined_df = pd.concat([DMSO_long, cipr_long])
+
+    # Convert relevant columns to numeric
+    combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
+
+    plt.figure(figsize=(12, 8))
+    sns.lineplot(data=combined_df, x='Fraction', y='Intensity', hue='Treatment', style='Treatment', markers=True,
+                 errorbar ='sd', err_style='band')
+
+    x_labels = [f"F{i}" for i in range(1,10)]
+    plt.xticks(ticks=range(1, 10), labels=x_labels)
+
+    # plt.ylim(-0.2, 1)
+
+    plt.xlabel('Fraction')
+    plt.ylabel(f'{normalize_mehod} normalized Intensity')
+    plt.title(f'{normalize_mehod} normalized Intensity for {gene_name} for each')
+    plt.legend(title='Treatment')
+    plt.grid(True)
+    plt.show()
+
+    # Save the plot
+    plt.savefig(f"Result/{normalize_mehod} normalized Intensity for {gene_name} for each DMSO and Whel run.png")
+
+def plot_gene_intensity_DM(DMSO_df, moxi_df, gene_name, normalize_mehod):
+    """
+    This is to plot the gene intensity with both the DMSO and Wheldone dataframe on a specific gene.
+    :param DMSO_df:
+    :param whel_df:
+    :param gene_name:
+    :return:
+    """
+    # Filter the dataframes to only include the specified gene
+    DMSO_gene_data = DMSO_df[DMSO_df['Gene'] == gene_name]
+    # cipr_gene_data = cipr_df[cipr_df['Gene'] == gene_name]
+    moxi_gene_data = moxi_df[moxi_df['Gene'] == gene_name]
+    # peng_gene_data = peng_df[peng_df['Gene'] == gene_name]
+
+
+    # Reshape the DataFrames to long format
+    DMSO_long = pd.melt(DMSO_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    # cipr_long = pd.melt(cipr_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    moxi_long = pd.melt(moxi_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    # peng_long = pd.melt(peng_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+
+
+    # Extract run and fraction information
+    DMSO_long[['Treatment', 'Fraction']] = DMSO_long['Fraction'].str.extract(r'(DMSO)-F(\d+)')
+    # cipr_long[['Treatment', 'Fraction']] = cipr_long['Fraction'].str.extract(r'(Cipro)-F(\d+)')
+    moxi_long[['Treatment', 'Fraction']] = moxi_long['Fraction'].str.extract(r'(Moxi)-F(\d+)')
+    # peng_long[['Treatment', 'Fraction']] = peng_long['Fraction'].str.extract(r'(PenG)-F(\d+)')
+
+
+    # Combine the two DataFrames
+    combined_df = pd.concat([DMSO_long, moxi_long])
+
+    # Convert relevant columns to numeric
+    combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
+
+    plt.figure(figsize=(12, 8))
+    sns.lineplot(data=combined_df, x='Fraction', y='Intensity', hue='Treatment', style='Treatment', markers=True,
+                 errorbar ='sd', err_style='band')
+
+    x_labels = [f"F{i}" for i in range(1,10)]
+    plt.xticks(ticks=range(1, 10), labels=x_labels)
+
+    # plt.ylim(-0.2, 1)
+
+    plt.xlabel('Fraction')
+    plt.ylabel(f'{normalize_mehod} normalized Intensity')
+    plt.title(f'{normalize_mehod} normalized Intensity for {gene_name} for each')
+    plt.legend(title='Treatment')
+    plt.grid(True)
+    plt.show()
+
+    # Save the plot
+    plt.savefig(f"Result/{normalize_mehod} normalized Intensity for {gene_name} for each DMSO and Whel run.png")
+
+
+def plot_gene_intensity_all(DMSO_df,cipr_df, moxi_df, peng_df, gene_name, normalize_mehod):
+    """
+    This is to plot the gene intensity with both the DMSO and Wheldone dataframe on a specific gene.
+    :param DMSO_df:
+    :param whel_df:
+    :param gene_name:
+    :return:
+    """
+    # Filter the dataframes to only include the specified gene
+    DMSO_gene_data = DMSO_df[DMSO_df['Gene'] == gene_name]
+    cipr_gene_data = cipr_df[cipr_df['Gene'] == gene_name]
+    moxi_gene_data = moxi_df[moxi_df['Gene'] == gene_name]
+    peng_gene_data = peng_df[peng_df['Gene'] == gene_name]
+
+
+    # Reshape the DataFrames to long format
+    DMSO_long = pd.melt(DMSO_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    cipr_long = pd.melt(cipr_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    moxi_long = pd.melt(moxi_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+    peng_long = pd.melt(peng_gene_data, id_vars=['Gene'], var_name='Fraction', value_name='Intensity')
+
+
+    # Extract run and fraction information
+    DMSO_long[['Treatment', 'Fraction']] = DMSO_long['Fraction'].str.extract(r'(DMSO)-F(\d+)')
+    cipr_long[['Treatment', 'Fraction']] = cipr_long['Fraction'].str.extract(r'(Cipro)-F(\d+)')
+    moxi_long[['Treatment', 'Fraction']] = moxi_long['Fraction'].str.extract(r'(Moxi)-F(\d+)')
+    peng_long[['Treatment', 'Fraction']] = peng_long['Fraction'].str.extract(r'(PenG)-F(\d+)')
+
+
+    # Combine the two DataFrames
+    combined_df = pd.concat([DMSO_long, cipr_long, moxi_long, peng_long])
+
+    # Convert relevant columns to numeric
+    combined_df['Fraction'] = pd.to_numeric(combined_df['Fraction'])
+
+    plt.figure(figsize=(12, 8))
+    sns.lineplot(data=combined_df, x='Fraction', y='Intensity', hue='Treatment', style='Treatment', markers=True,
+                 errorbar ='sd', err_style='band')
+
+    x_labels = [f"F{i}" for i in range(1,10)]
+    plt.xticks(ticks=range(1, 10), labels=x_labels)
+
+    # plt.ylim(-0.2, 1)
+
+    plt.xlabel('Fraction')
+    plt.ylabel(f'{normalize_mehod} normalized Intensity')
+    plt.title(f'{normalize_mehod} normalized Intensity for {gene_name} for each')
+    plt.legend(title='Treatment')
+    plt.grid(True)
+    plt.show()
+
+    # Save the plot
+    plt.savefig(f"Result/{normalize_mehod} normalized Intensity for {gene_name} for each DMSO and Whel run.png")
+

@@ -175,29 +175,8 @@ def nsaf_method(df):
     return df
 
 
-def ks_test_total(dmso, whel):
-    """
-    THe total score of the ks-test into a dataframe between two runs for all genes. THis is for the average scores.
-    :param dmso:
-    :param whel:
-    :return:
-    """
-
-    genes = dmso["Protein"]
-    ks_results = {'Protein': genes}
-    results_statistic = []
-    results_pvalue = []
-
-    for gene in genes:
-        dmso_data = dmso[dmso["Protein"] == gene].drop(columns=["Protein"]).values.flatten()
-        whel_data = whel[whel["Protein"] == gene].drop(columns=["Protein"]).values.flatten()
-        ks_result = ks_2samp(dmso_data, whel_data)
-        results_statistic.append(ks_result.statistic)
-        results_pvalue.append(ks_result.pvalue)
-
-    ks_results['KS_Statistic'] = results_statistic
-    ks_results['P_Value'] = results_pvalue
-    return pd.DataFrame(ks_results)
+def difference_test(dmso, drug):
+    print("HI")
 
 
 
@@ -205,4 +184,3 @@ if __name__ == '__main__':
     df_intensity = fill_na_with_half_min(dataframe_process("report.pg_matrix.tsv"))
     df_dmso_nsaf, df_peng_nsaf, df_moxi_nsaf, df_cipr_nsaf = dataframe_process_nsaf("combined_protein.tsv")
     df_dmso_inten, df_peng_inten, df_moxi_inten, df_cipr_inten = seperate_intensity(df_intensity)
-    ks = ks_test_total(df_dmso_inten, df_peng_inten)

@@ -16,6 +16,7 @@ def extract_name(column_path):
     with_mzml = '-'.join(parts[1:4])
     return with_mzml.split('.')[0]
 
+
 def dataframe_process(file_name):
     """
     clean and rename the column names for easier downstream process
@@ -26,42 +27,51 @@ def dataframe_process(file_name):
     # Input: tsv data
     # Output: dataframe with no empty genes and nicer column names
     df = pd.read_csv(file_name, delimiter='\t')
-    new_column_names = df.columns[:5].tolist() + [extract_name(col) for col in df.columns[5:]]
+    new_column_names = df.columns[:4].tolist() + [extract_name(col) for col in df.columns[4:]]
     df.columns = new_column_names
     df_cleaned = df.dropna(subset=['Genes'])
+
+    select_column = ["Protein.Group"] + new_column_names[4:]
+
+    df_cleaned = df[select_column]
+    column_new_names = ["Protein"] + new_column_names[4:]
+
+    df_cleaned.columns = column_new_names
 
     return df_cleaned
 
 
-def parse_col_name(col):
+def dataframe_process_nsaf(file_name):
     """
-    This will parse the column name that can tell us whether it is whel or DSMO, F1 to F9 and n1 to n3
-    :param col:
+    clean and rename the column names for easier downstream process
+    :param file_name:
     :return:
     """
-    # Input: whel-n1-F9
-    # Output: prefix = whel, run = n1, f = F9
-    prefix, run, f = col.split('-')
-    return prefix, run, f
+    # Read the tsv file
+    # Input: tsv data
+    # Output: dataframe with no empty genes and nicer column names
+    combined_df = pd.read_csv(file_name, delimiter='\t')
+
+    df_dmso = combined_df[["Protein ID"] + ["Protein Length"] + [dmso for dmso in combined_df.columns if "DMSO" in dmso]]
+    df_peng = combined_df[["Protein ID"] + ["Protein Length"] + [peng for peng in combined_df.columns if "PenG" in peng]]
+    df_moxi = combined_df[["Protein ID"] + ["Protein Length"] + [moxi for moxi in combined_df.columns if "Moxi" in moxi]]
+    df_cipr = combined_df[["Protein ID"] + ["Protein Length"] + [cipr for cipr in combined_df.columns if "Cipro" in cipr]]
 
 
-def column_group(df):
+    return seperate_by_result(df_dmso), seperate_by_result(df_peng), seperate_by_result(df_moxi), seperate_by_result(df_cipr)
+
+
+def seperate_by_result(df):
     """
-    get the dataframe of the group columns for pearson correlation
+    We need spectral count for intensity, and
     :param df:
     :return:
     """
-    # Input: Dataframe
-    # output: A dictionary of grouped columns according to their fraction and method
-    groups = {}
-    for col in df.columns[1:]:
-        prefix, run, f_number = parse_col_name(col)
-        key = (prefix, f_number)
-        if key not in groups:
-            groups[key] = []
-        groups[key].append(col)
+    columns = df.columns
+    nsaf = ["Protein ID"] + ["Protein Length"] + [spec for spec in columns if "Total Spectral Count" in spec]
+    df_nsaf = df[nsaf]
 
-    return groups
+    return df_nsaf
 
 
 def pearson_correlations(df, group):
@@ -271,63 +281,42 @@ def rename_dataframe_columns(df):
     return df_copy
 
 
-# Read all the files needed
-ccp = pd.read_excel("ccp.xlsx", "Atlas")
-ccp_genes = list(set(ccp["Genes"]))
-df_new = pd.read_csv("1-6_MBR.tsv", delimiter= "\t")
-df_new_filtered = df_new[~df_new['Protein'].str.startswith('tr|') & ~df_new['Protein'].str.contains('contam')]
-intensity_pattern = r'F\d+_\d+ Intensity'
-columns_to_subset_intensity = df_new_filtered.filter(regex=intensity_pattern).columns
-columns_to_subset_intensity = ["Genes"] + list(columns_to_subset_intensity)
-df_intensity_intermediate = df_new_filtered[columns_to_subset_intensity]
-intensity_df = rename_dataframe_columns(df_intensity_intermediate)
-
-df_dmso, df_whel = separate_dataframe(intensity_df)
-filled_dmso = fill_na_with_half_min(df_dmso).dropna()
-filled_whel = fill_na_with_half_min(df_whel).dropna()
-
-spec_count_df = pd.read_csv("1-6_MBR.tsv", delimiter= "\t")
-spec_count_df_filtered = spec_count_df[~spec_count_df['Protein'].str.startswith('tr|') & ~spec_count_df['Protein'].str.contains('contam')]
-spec_pattern = r'F\d+_\d+ Total Spectral Count'
-columns_to_subset = spec_count_df_filtered.filter(regex=spec_pattern).columns
-columns_to_subset = ["Genes"] + ["Protein Length"]+ list(columns_to_subset)
-
-# Rename the columns
-sc_df_intermediate = spec_count_df_filtered[columns_to_subset]
-spec_df = rename_dataframe_columns(sc_df_intermediate)
-
-# Get all the genes for each run and Union them
-dmso_gene = set(filled_dmso["Genes"])
-whel_gene = set(filled_whel["Genes"])
-inter_genes = list(dmso_gene & whel_gene)
-
-# Subset shared genes
-dmso_shared = filled_dmso[filled_dmso["Genes"].isin(inter_genes)]
-whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
+# # Read all the files needed
+# ccp = pd.read_excel("ccp.xlsx", "Atlas")
+# ccp_genes = list(set(ccp["Genes"]))
+# df_new = pd.read_csv("1-6_MBR.tsv", delimiter= "\t")
+# df_new_filtered = df_new[~df_new['Protein'].str.startswith('tr|') & ~df_new['Protein'].str.contains('contam')]
+# intensity_pattern = r'F\d+_\d+ Intensity'
+# columns_to_subset_intensity = df_new_filtered.filter(regex=intensity_pattern).columns
+# columns_to_subset_intensity = ["Genes"] + list(columns_to_subset_intensity)
+# df_intensity_intermediate = df_new_filtered[columns_to_subset_intensity]
+# intensity_df = rename_dataframe_columns(df_intensity_intermediate)
+#
+# df_dmso, df_whel = separate_dataframe(intensity_df)
+# filled_dmso = fill_na_with_half_min(df_dmso).dropna()
+# filled_whel = fill_na_with_half_min(df_whel).dropna()
+#
+# spec_count_df = pd.read_csv("1-6_MBR.tsv", delimiter= "\t")
+# spec_count_df_filtered = spec_count_df[~spec_count_df['Protein'].str.startswith('tr|') & ~spec_count_df['Protein'].str.contains('contam')]
+# spec_pattern = r'F\d+_\d+ Total Spectral Count'
+# columns_to_subset = spec_count_df_filtered.filter(regex=spec_pattern).columns
+# columns_to_subset = ["Genes"] + ["Protein Length"]+ list(columns_to_subset)
+#
+# # Rename the columns
+# sc_df_intermediate = spec_count_df_filtered[columns_to_subset]
+# spec_df = rename_dataframe_columns(sc_df_intermediate)
+#
+# # Get all the genes for each run and Union them
+# dmso_gene = set(filled_dmso["Genes"])
+# whel_gene = set(filled_whel["Genes"])
+# inter_genes = list(dmso_gene & whel_gene)
+#
+# # Subset shared genes
+# dmso_shared = filled_dmso[filled_dmso["Genes"].isin(inter_genes)]
+# whel_shared = filled_whel[filled_whel["Genes"].isin(inter_genes)]
 
 if __name__ == '__main__':
-    print("Hello")
+    df_intensity = dataframe_process("report.pg_matrix.tsv")
+    df_dmso_nsaf, df_peng_nsaf, df_moxi_nsaf, df_cipr_nsaf = dataframe_process_nsaf("combined_protein.tsv")
 
-    # df_original = dataframe_process("report.pg_matrix 3.tsv")
-    # df_rerun = dataframe_process("report.pg_matrix-re-run.tsv")
-    # column_names_rerun = list(df_rerun.columns)[5:-1]
-    # merged_df = merge_new_run(df_original, df_rerun)
-    # merged_runs_columns = column_group(merged_df)
-    # pearson_cor = dataframe_work(merged_df, merged_runs_columns)
-    # fin_pearson = transform_correlation_dict(pearson_cor)
-    #
-    # # merged_df.to_excel("Manual_result.xlsx", index = False)
-    # fin_pearson.sort_index().to_excel("Pearson_result.xlsx", index = False)
-    #
-    # # # REAL WORK
-    # experiment = pd.read_excel("New_pearson.xlsx")
-    experiment_columns = column_group(intensity_df)
-    #
-    experiment_pearson = dataframe_work(intensity_df, experiment_columns)
-    experiment_spearman = dataframe_work_spearman(intensity_df, experiment_columns)
-    #
-    final_result_pearson = transform_correlation_dict(experiment_pearson)
-    final_result_spearman = transform_correlation_dict(experiment_spearman)
-    #
-    final_result_pearson.sort_values(by='Fraction').to_excel("Pearson_MBR.xlsx", index = False)
-    final_result_spearman.sort_values(by='Fraction').to_excel("Spearman_MBR.xlsx", index = False)
+

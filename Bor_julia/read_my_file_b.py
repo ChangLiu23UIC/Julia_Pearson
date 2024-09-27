@@ -129,24 +129,29 @@ def fill_na_with_half_min(df):
 
 
 def nsaf_method(df):
+    # Columns that we don't want to normalize (e.g., 'Gene' and 'Protein Length')
     exclude_columns = ['Gene', 'Protein Length']
 
+    # Strip any whitespace from column names
     df.columns = df.columns.str.strip()
 
+    # Identify the columns to normalize (all except exclude_columns)
     columns_to_divide = [col for col in df.columns if col not in exclude_columns]
 
+    # Ensure 'Protein Length' and spectral values are treated as float
     df['Protein Length'] = df['Protein Length'].astype('float64')
     df[columns_to_divide] = df[columns_to_divide].astype('float64')
 
-    # Step 1: Normalize by protein length
-    df[columns_to_divide] = df[columns_to_divide].div(df['Protein Length'].replace(0, float('nan')), axis=0)
+    # Step 1: Normalize each column by protein length
+    for col in columns_to_divide:
+        # Normalize spectral counts by protein length for the specific column
+        df[col] = df[col].div(df['Protein Length'].replace(0, float('nan')))
 
-    # Step 2: Normalize by total abundance within each sample
-    total_sums = df[columns_to_divide].sum()
+        # Step 2: Normalize by the total sum of the length-normalized values in each column
+        total_sum = df[col].sum()
+        df[col] = df[col].div(total_sum)
 
-    # Divide the length-normalized spectral counts by the total sum for each column (sample)
-    df[columns_to_divide] = df[columns_to_divide].div(total_sums, axis=1)
-
+    # Reorder columns to have 'Gene' first, followed by the normalized spectral data
     ordered_columns = ['Gene'] + columns_to_divide
     df = df[ordered_columns]
 
